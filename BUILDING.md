@@ -1,5 +1,7 @@
 # Building Minis
 
+> **On-device Butler fork / Personal Team:** first-time iOS signing and dependency setup is covered in [docs/BUTLER_IOS_BUILD.md](docs/BUTLER_IOS_BUILD.md). Use a Git clone with submodules, not a GitHub ZIP.
+
 Minis ships a full Linux sandbox inside the app, so a first build is not just
 "open the project and press Run": the native dependencies (iSH on iOS, PRoot on
 Android, FFmpeg, LAME) and the Alpine rootfs are **built from source by the
@@ -97,7 +99,7 @@ LAME, so LAME must exist first or MP3 encoding is silently dropped:
 
 ```sh
 ./deps/build_lame.sh          # → deps/lame-build/lib/libmp3lame.a
-./deps/build_ffmpeg.sh        # → deps/frameworks/*.framework  (LGPL config)
+./deps/build_ffmpeg.sh        # → deps/frameworks/*.xcframework  (LGPL config)
 ./deps/build_ish.sh           # → deps/libs/*.a, deps/include/, deps/resources/
 ./deps/prepare_alpine_rootfs.sh   # → deps/resources/alpine-rootfs.zip
 ./deps/build_rclone_ios.sh    # → deps/frameworks/Rclone.xcframework
@@ -106,8 +108,9 @@ LAME, so LAME must exist first or MP3 encoding is silently dropped:
 What each produces:
 
 - **`build_lame.sh`** — LAME 3.100 as a static library for arm64.
-- **`build_ffmpeg.sh`** — FFmpeg 6.1.2 as per-library `.framework` bundles plus
-  an umbrella `FFmpeg.framework`. Configured **LGPL**: do not add
+- **`build_ffmpeg.sh`** — FFmpeg 6.1.2 as per-library `.framework` bundles,
+  then wraps all built platforms into `.xcframework` bundles including `FFmpeg.xcframework`.
+  Xcode links the `.xcframework` outputs. Configured **LGPL**: do not add
   `--enable-gpl` or `--enable-nonfree` — see [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
 - **`build_ish.sh`** — `libish`, `libish_emu`, `libfakefs` from the `deps/ish`
   submodule, plus headers and the VDSO.
