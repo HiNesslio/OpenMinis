@@ -302,7 +302,8 @@ struct ButlerIntelligentCardView: View {
             if let summary = card.summary, !summary.isEmpty {
                 Text(summary).font(.subheadline).foregroundStyle(.secondary)
             }
-            ForEach(Array(card.items.enumerated()), id: \.offset) { _, item in
+            ForEach(Array(card.items.enumerated()), id: \.offset) { pair in
+                let item = pair.element
                 Divider()
                 HStack(alignment: .top, spacing: 12) {
                     if let time = item.time {
