@@ -68,12 +68,16 @@ enum ButlerDecisionEngine {
             for index in 0..<(timed.count - 1) {
                 let first = timed[index], second = timed[index + 1]
                 let gap = second.start.timeIntervalSince(first.end)
-                guard gap >= 0, gap <= 15 * 60, second.start <= now.addingTimeInterval(12 * 3600) else { continue }
+                guard gap <= 15 * 60,
+                      second.start <= now.addingTimeInterval(12 * 3600) else { continue }
+                let overlapping = gap < 0
                 result.append(ButlerInsight(
                     id: "tight:" + first.id + ":" + second.id,
                     kind: .tightSchedule,
-                    title: "兩個安排時間接近",
-                    detail: "「\(first.title)」結束後，距離「\(second.title)」開始只有 \(Int(gap / 60)) 分鐘。請確認轉場與準備時間。",
+                    title: overlapping ? "行程時間重疊" : "兩個安排時間接近",
+                    detail: overlapping
+                        ? "「\(first.title)」與「\(second.title)」時間重疊，請確認是否需要調整。"
+                        : "「\(first.title)」結束後，距離「\(second.title)」開始只有 \(Int(gap / 60)) 分鐘。請確認轉場與準備時間。",
                     relatedEventID: second.id
                 ))
             }
