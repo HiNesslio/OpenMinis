@@ -6,6 +6,7 @@ Branch: feat/ondevice-butler-foundation. This is a first on-device working slice
 
 - Home tools menu > Today · Personal Butler opens a native SwiftUI Today sheet.
 - Separate permission prompts for the Apple Calendar and Reminders. User data is read through EventKit only after grant. No calendar writes.
+- EventKit read permissions support iOS 16 using `requestAccess(to:completion:)` / `.authorized` and iOS 17+ using `requestFullAccessToEvents()` / `requestFullAccessToReminders()` / `.fullAccess`. Calendar write-only access is never treated as read authorization.
 - Local relevance rules highlight near-future appointments with known locations, near-contiguous meetings, and reminders due soon.
 - Living Memory records are explicitly user-confirmed and locally stored in an application-support JSON file with iOS file protection, delete controls and bounded length. They are not automatically synced.
 - Local Memory → remote LLM prompt sharing is OFF by default; enabling it is a separate visible toggle. OpenMinis' session-level Memory switch must also be enabled.
@@ -43,6 +44,12 @@ Allowed kinds: agenda, insights, summary. Maximum twelve rows. No model-generate
 - Notifications can appear on the lock screen, so the toggle is opt-in; the user can revoke them in iOS Settings.
 - This branch has not been built on an actual Xcode runner yet. Native dependency build and test verification on macOS are required.
 - Keep GPLv3 notices and downstream source distribution obligations when shipping a modified OpenMinis.
+
+## iOS deployment compatibility
+
+The Minis app target is iOS **16.0** (widget target 16.2), so shared Today SwiftUI and EventKit code cannot unconditionally invoke iOS 17 APIs. Use availability checks to select the appropriate EventKit authorization request and status. The SwiftUI view uses the iOS 16 `onChange(of:perform:)` single-value handler. Both iOS 16 and 17+ permission-purpose strings are present in `src/ios/Info.plist`.
+
+When testing on a Mac with Xcode, verify an iOS 16 deployment target builds without availability diagnostics. On devices, separately verify the deny/grant/revoke flows for Calendar and Reminders on iOS 16 and iOS 17+. Swift source availability is checked statically in this branch, but full Xcode compilation and runtime permission behavior have **not** been verified here.
 
 ## On-device verification checklist
 
