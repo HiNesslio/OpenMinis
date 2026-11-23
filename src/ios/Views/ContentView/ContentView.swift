@@ -563,6 +563,14 @@ struct ContentView: View {
     static let pendingBackgroundNavigationTTL: TimeInterval = 90
 
     var body: some View {
+        sceneLifecycleView
+    }
+
+    // [T-ios-contentview-typecheck] Split the giant modifier chain into
+    // separate opaque view expressions. AnyView erases the accumulated generic
+    // type at each stable boundary, avoiding compiler timeouts and runtime
+    // metadata recursion without changing the order of modifiers.
+    private var baseHomeView: some View {
         GeometryReader { geo in
             let wide = isIPad && geo.size.width >= compactThreshold
             Group {
@@ -830,6 +838,12 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .dismissAllImmersivePresentations)) { _ in
             if activeToolSheet != nil { activeToolSheet = nil }
         }
+    }
+
+    // All session/folder/delete/export presentations retain the same relative
+    // placement; only the compiler's type-checking boundary has changed.
+    private var homePresentationView: some View {
+        AnyView(baseHomeView)
         .sheet(item: $sessionToDelete) { session in
             DeleteConfirmSheet(info: $singleDeleteInfo, isLoading: false) {
                 print("[DELETE] onDelete called for session: \(session.id)")
@@ -980,6 +994,12 @@ struct ContentView: View {
                 .animation(.easeInOut(duration: 0.2), value: isExporting)
             }
         }
+    }
+
+    // Changes to model/navigation state are observed from a separate opaque
+    // view expression, rather than contributing to the presentation type tree.
+    private var homeSelectionObserversView: some View {
+        AnyView(homePresentationView)
         // The cold-launch task has multiple async hops and navigation branches;
         // type-check it separately from this large SwiftUI modifier chain.
         .task { await loadInitialSessionsAndNavigate() }
@@ -1083,6 +1103,12 @@ struct ContentView: View {
                 scheduleOutgoingPreviewRefresh()
             }
         }
+    }
+
+    // Stack navigation and app life-cycle observers are deliberately separate
+    // from sheet composition and split-layout selection.
+    private var sceneLifecycleView: some View {
+        AnyView(homeSelectionObserversView)
         .onChange(of: navigationPath) { _ in
             // [T-crash-breadcrumbs] Navigation depth; back at the root the
             // current page is the home list (a chat page records its own).
