@@ -12,7 +12,7 @@ if [ ! -e ".git" ]; then
   fail "This looks like a GitHub ZIP download. Native iSH submodules require a git clone. Use: git clone --recurse-submodules -b feat/ondevice-butler-foundation https://github.com/HiNesslio/OpenMinis.git"
 fi
 
-for cmd in xcodebuild xcrun git make go meson ninja; do
+for cmd in xcodebuild xcrun git make go meson ninja unzip ditto; do
   command -v "$cmd" >/dev/null 2>&1 || fail "Missing $cmd. Install Xcode and required build tools (see BUILDING.md)."
 done
 
