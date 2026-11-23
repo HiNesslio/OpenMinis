@@ -127,6 +127,48 @@ python3 scripts/configure_ios_personal_dev.py --reset
 
 This restores the original `project.pbxproj` from its local backup and removes only the generated `PersonalDev.entitlements`. The local provider customization is intentionally preserved. Keep any API keys and local development files out of Git.
 
+## Fix runtime crash: missing App Group entitlement
+
+If Xcode stops in LLDB with:
+
+```text
+AIChatViewModel+RequestBudget.swift:424: Fatal error:
+Unexpectedly found nil while unwrapping an Optional value
+```
+
+the local Personal Team build has **no App Group entitlement** (as intended by
+`configure_ios_personal_dev.py`), but the original Minis storage code assumed
+that `FileManager.containerURL(forSecurityApplicationGroupIdentifier:)`
+always succeeds. It can legally return `nil`.
+
+The Butler branch now keeps `minisAppGroupRoot` and `minisConfigRoot` inside
+`Library/Application Support/MinisPersonalDev/` **only when App Group access is
+unavailable**. Both locations remain distinct: user-visible memory/skills/shared
+storage under `MinisFileProvider/` and private metadata (including MCP
+credentials) under `MinisConfig/`. This fallback is persistent app-sandbox
+storage; it is **not** accessible to Share or FileProvider extensions.
+
+In that Personal Team mode the app also skips FileProvider domain registration,
+its watcher and App Group migration. The migration is deliberately skipped:
+it moves files, and there is no shared entitlement-backed destination. Normal
+App Group builds keep the original storage paths and migration behavior.
+
+```bash
+cd ~/Downloads/OpenMinis-Butler
+git pull --ff-only
+open src/ios/Minis.xcodeproj
+```
+
+In Xcode, use **Product > Clean Build Folder** and then Run on the phone. It
+is not necessary to rebuild native dependencies. For a meaningful validation,
+open Today, grant Calendar/Reminders access, save a Living Memory fact, close
+Today, reopen it, and verify the fact remains.
+
+**Switching later from Personal Team to a paid App Group-enabled build does not
+automatically migrate data between these two storage roots.** Export/backup
+important local data first. The fallback does not enable Files integration,
+iCloud sync, shared extension data, or other entitlements.
+
 ## Fix `clang: error: invalid linker name in argument '-fuse-ld=lld'`
 
 This failure is from the **Linux ARM64 VDSO link step** in the pinned iSH Meson submodule. It may appear while building `libish.a`, `libish_emu.a`, and `libfakefs.a`, which depend on the VDSO target. Installing Homebrew `llvm` alone is insufficient because LLD is packaged separately.
