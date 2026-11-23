@@ -72,6 +72,32 @@ bash scripts/prepare_ios_device_deps.sh
 
 This runs the actual build scripts in order: LAME → FFmpeg (produces `FFmpeg.xcframework` and six `libav*.xcframework` bundles) → iSH → Alpine rootfs → Rclone (produces `Rclone.xcframework`). It also checks the outputs exist. Build failures should be fixed at the first failing command; **do not** create empty `.xcframework` directories to silence Xcode.
 
+### Go JSON v2 / go-json-experiment build failure
+
+If the Rclone build shows the following errors:
+
+```text
+undefined: json.SkipFunc
+undefined: json.DiscardUnknownMembers
+```
+
+The repository currently pins `github.com/go-json-experiment/json` to the August 2025 prototype API. Go 1.27 uses a finalized JSON v2 implementation that removed these identifiers. The **Rclone build script now defaults `GOEXPERIMENT=nojsonv2`**, without changing `go.mod` or `go.sum`.
+
+For a local checkout that hasn't pulled this fix yet, the equivalent one-off invocation is:
+
+```bash
+GOEXPERIMENT=nojsonv2 bash deps/build_rclone_ios.sh
+```
+
+To inspect the environment:
+
+```bash
+go version
+go env GOEXPERIMENT GOTOOLCHAIN
+```
+
+If you previously set `GOEXPERIMENT=jsonv2` globally, unset it before running the updated script, or invoke the one-off command above. No `go clean -modcache`, library source modification, or unpinned module upgrade is needed for this workaround. The setting affects only the Rclone build process and its Go subprocesses. The Go 1.27 opt-out is transitional and should be revisited after upstream dependencies are upgraded and verified.
+
 ### If only Rclone.xcframework is missing
 
 You can build just Rclone without re-running FFmpeg and iSH:
