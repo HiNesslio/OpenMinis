@@ -127,6 +127,30 @@ python3 scripts/configure_ios_personal_dev.py --reset
 
 This restores the original `project.pbxproj` from its local backup and removes only the generated `PersonalDev.entitlements`. The local provider customization is intentionally preserved. Keep any API keys and local development files out of Git.
 
+## Fix `clang: error: invalid linker name in argument '-fuse-ld=lld'`
+
+This failure is from the **Linux ARM64 VDSO link step** in the pinned iSH Meson submodule. It may appear while building `libish.a`, `libish_emu.a`, and `libfakefs.a`, which depend on the VDSO target. Installing Homebrew `llvm` alone is insufficient because LLD is packaged separately.
+
+```bash
+cd ~/Downloads/OpenMinis-Butler
+brew install lld
+export PATH="$(brew --prefix lld)/bin:$PATH"
+which ld.lld
+ld.lld --version
+set -o pipefail
+bash deps/build_ish.sh 2>&1 | tee /tmp/minis-ish-build.log
+```
+
+The updated `deps/build_ish.sh` now checks for LLD and prepends a Homebrew LLD prefix when installed but not on PATH. It also performs a dry-run of the compiler's linker selection and fails with an actionable message **before** invoking Ninja. No need to alter the upstream iSH Git submodule, run `meson setup --wipe`, or rebuild FFmpeg/Rclone. An existing Meson build directory can be reused.
+
+After the iSH build completes, verify:
+
+```bash
+ls -lh deps/libs/libish.a deps/libs/libish_emu.a deps/libs/libfakefs.a deps/libs/libish_aot.a
+```
+
+The `RootfsPatch.bundle` resource should also have been staged by `build_ish.sh`. If the Alpine ZIP is absent, run `bash deps/prepare_alpine_rootfs.sh` separately before rebuilding Xcode.
+
 ## Fix missing Alpine rootfs and RootfsPatch resources
 
 Xcode copies both `deps/resources/alpine-rootfs.zip` and `deps/resources/RootfsPatch.bundle` into the app. Neither is committed to Git.
