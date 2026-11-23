@@ -117,10 +117,32 @@ check_prerequisites() {
     done
 
     if [ -z "$LLVM_CLANG" ]; then
-        log_warning "LLVM Clang not found. VDSO may not build correctly."
-        log_warning "Install with: brew install llvm"
-    else
-        log_info "Found LLVM Clang: $LLVM_CLANG"
+        log_error "Homebrew LLVM Clang is required for the ARM64 Linux VDSO. Install: brew install llvm"
+    fi
+    log_info "Found LLVM Clang: $LLVM_CLANG"
+
+    # Homebrew splits lld (the ELF linker) from llvm. The iSH Meson subproject
+    # invokes Homebrew Clang with -target aarch64-linux-gnu -fuse-ld=lld.
+    # Without ld.lld on PATH, Clang reports a misleading "invalid linker name".
+    if ! command -v ld.lld >/dev/null 2>&1 && command -v brew >/dev/null 2>&1; then
+        for lld_formula in lld lld@21; do
+            lld_prefix="$(brew --prefix "$lld_formula" 2>/dev/null || true)"
+            if [ -n "$lld_prefix" ] && [ -x "$lld_prefix/bin/ld.lld" ]; then
+                export PATH="$lld_prefix/bin:$PATH"
+                break
+            fi
+        done
+    fi
+    if ! command -v ld.lld >/dev/null 2>&1; then
+        log_error "ld.lld is missing from PATH (needed for Linux ARM64 VDSO). Run: brew install lld; export PATH=\"\$(brew --prefix lld)/bin:\$PATH\""
+    fi
+    log_info "Found LLVM LLD: $(command -v ld.lld)"
+
+    # Detect an incompatible Clang/LLD pairing BEFORE Ninja starts a lengthy
+    # compile; -### validates the linker selection without producing binaries.
+    if ! "$LLVM_CLANG" -target aarch64-linux-gnu -fuse-ld=lld \
+            -nostdlib -shared -x c /dev/null -o /dev/null -### >/dev/null 2>&1; then
+        log_error "LLVM Clang cannot resolve -fuse-ld=lld. Check llvm/lld installation and PATH."
     fi
 
     log_success "Prerequisites check passed"
