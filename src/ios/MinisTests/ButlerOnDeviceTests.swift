@@ -48,6 +48,24 @@ final class ButlerOnDeviceTests: XCTestCase {
         XCTAssertEqual(insights.filter { $0.kind == .tightSchedule }.count, 1)
     }
 
+    func testOverlappingEventsSurfaceConflict() {
+        let events = [
+            event("one", start: 120 * 60, duration: 60 * 60),
+            event("two", start: 150 * 60, duration: 60 * 60)
+        ]
+        let insights = ButlerDecisionEngine.evaluate(now: now, events: events, tasks: [])
+        XCTAssertTrue(insights.contains(where: { $0.title == "行程時間重疊" }))
+    }
+
+    func testBriefingDoesNotClaimMissingPermissionsAreEmptySchedules() {
+        let briefing = ButlerBriefingComposer.compose(
+            now: now, events: [], tasks: [],
+            hasCalendarAccess: false, hasReminderAccess: false
+        )
+        XCTAssertTrue(briefing.summary.contains("連接"))
+        XCTAssertFalse(briefing.summary.contains("今日還有 0 項行程"))
+    }
+
     func testOldOverdueReminderNotResurfaced() {
         let task = ButlerTaskItem(id: "old", title: "old", due: now.addingTimeInterval(-9 * 86400))
         XCTAssertTrue(ButlerDecisionEngine.evaluate(now: now, events: [], tasks: [task]).isEmpty)
