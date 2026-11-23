@@ -1,3 +1,4 @@
+import Foundation
 import XCTest
 @testable import Minis
 
@@ -94,6 +95,30 @@ final class ButlerOnDeviceTests: XCTestCase {
         let card = ButlerIntelligentCardParser.parse(markdown)
         XCTAssertEqual(card?.kind, "agenda")
         XCTAssertEqual(card?.items.first?.time, "09:00")
+    }
+
+    func testButlerStorageRootSupportsAppGroupAndPersonalTeam() {
+        let fm = FileManager.default
+        let base = AIChatViewModel.minisStorageContainerRoot
+        if let appGroup = fm.containerURL(
+            forSecurityApplicationGroupIdentifier: SharedContainerStore.appGroupID
+        ) {
+            XCTAssertEqual(base.standardizedFileURL, appGroup.standardizedFileURL)
+        } else {
+            let appSupport = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+                ?? fm.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support", isDirectory: true)
+            XCTAssertEqual(
+                base.standardizedFileURL,
+                appSupport.appendingPathComponent("MinisPersonalDev", isDirectory: true).standardizedFileURL
+            )
+        }
+        // Metadata, including MCP credentials, must never be under the
+        // FileProvider-visible memory/skills/shared root.
+        let exposed = AIChatViewModel.minisAppGroupRoot
+        let config = AIChatViewModel.minisConfigRoot
+        XCTAssertEqual(exposed.deletingLastPathComponent(), base)
+        XCTAssertEqual(config.deletingLastPathComponent(), base)
+        XCTAssertFalse(config.path.hasPrefix(exposed.path + "/"))
     }
 
     func testCardFailsClosedOnUnknownTypeOrArbitraryText() {
