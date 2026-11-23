@@ -429,7 +429,8 @@ extension AIChatViewModel {
             return group
         }
         let appSupport = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
-            ?? fm.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support", isDirectory: true)
+            ?? URL(fileURLWithPath: NSHomeDirectory(), isDirectory: true)
+                .appendingPathComponent("Library/Application Support", isDirectory: true)
         return appSupport.appendingPathComponent("MinisPersonalDev", isDirectory: true)
     }
 
