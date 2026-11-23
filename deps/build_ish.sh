@@ -375,11 +375,17 @@ copy_outputs() {
         cp "$ISH_DIR/deps/config.h" "$OUTPUT_INCLUDE/ish/deps/"
     fi
 
-    # Copy RootfsPatch bundle (rootfs overlay patches applied on boot)
-    if [ -d "$ISH_DIR/app/RootfsPatch.bundle" ]; then
-        cp -r "$ISH_DIR/app/RootfsPatch.bundle" "$OUTPUT_RESOURCES/"
-        log_success "RootfsPatch.bundle copied"
+    # Copy RootfsPatch bundle (rootfs overlay patches applied on boot).
+    # Xcode references this generated resource unconditionally: do not return
+    # success when the pinned iSH submodule is missing/incomplete.
+    if [ ! -f "$ISH_DIR/app/RootfsPatch.bundle/manifest.plist" ]; then
+        log_error "RootfsPatch.bundle source missing. Run git submodule update --init --recursive."
     fi
+    cp -R "$ISH_DIR/app/RootfsPatch.bundle" "$OUTPUT_RESOURCES/"
+    if [ ! -f "$OUTPUT_RESOURCES/RootfsPatch.bundle/manifest.plist" ]; then
+        log_error "Failed to copy deps/resources/RootfsPatch.bundle."
+    fi
+    log_success "RootfsPatch.bundle copied"
 
     log_success "Output files copied"
 }
