@@ -106,7 +106,8 @@ final class ButlerOnDeviceTests: XCTestCase {
             XCTAssertEqual(base.standardizedFileURL, appGroup.standardizedFileURL)
         } else {
             let appSupport = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
-                ?? fm.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support", isDirectory: true)
+                ?? URL(fileURLWithPath: NSHomeDirectory(), isDirectory: true)
+                .appendingPathComponent("Library/Application Support", isDirectory: true)
             XCTAssertEqual(
                 base.standardizedFileURL,
                 appSupport.appendingPathComponent("MinisPersonalDev", isDirectory: true).standardizedFileURL
