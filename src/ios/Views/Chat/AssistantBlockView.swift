@@ -139,7 +139,7 @@ struct AssistantBlockView: View {
 
     @ViewBuilder
     private var textBlockView: some View {
-        if let card = ButlerIntelligentCardParser.parse(block.content), !isActiveMessage {
+        if !isActiveMessage, let card = ButlerIntelligentCardParser.parse(block.content) {
             ButlerIntelligentCardView(card: card)
         } else {
         SelectableMarkdownView(
