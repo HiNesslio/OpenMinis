@@ -14,6 +14,7 @@ import argparse
 import re
 import shutil
 from pathlib import Path
+from typing import Optional
 
 ROOT = Path(__file__).resolve().parent.parent
 IOS = ROOT / "src" / "ios"
@@ -41,7 +42,7 @@ ENTITLEMENTS_PATTERN = re.compile(
 )
 
 
-def configure(bundle_id: str, team: str | None) -> None:
+def configure(bundle_id: str, team: Optional[str]) -> None:
     if not re.fullmatch(r"[A-Za-z][A-Za-z0-9-]*(?:\.[A-Za-z][A-Za-z0-9-]*){2,}", bundle_id):
         raise SystemExit("Invalid bundle id. Example: com.example.minisdev (must be unique).")
     if team is not None and not re.fullmatch(r"[A-Z0-9]{10}", team):
