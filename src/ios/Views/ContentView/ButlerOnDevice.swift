@@ -97,6 +97,48 @@ enum ButlerDecisionEngine {
     }
 }
 
+struct ButlerDailyBriefing: Equatable {
+    let headline: String
+    let summary: String
+}
+
+enum ButlerBriefingComposer {
+    /// Local, deterministic briefing. No LLM or external signal required.
+    static func compose(
+        now: Date,
+        events: [ButlerAgendaItem],
+        tasks: [ButlerTaskItem],
+        hasCalendarAccess: Bool,
+        hasReminderAccess: Bool
+    ) -> ButlerDailyBriefing {
+        guard hasCalendarAccess || hasReminderAccess else {
+            return ButlerDailyBriefing(
+                headline: "準備好你的每日簡報",
+                summary: "連接日曆或提醒事項後，便可在本機整理當日重點。"
+            )
+        }
+        let upcoming = events.filter { $0.end > now }
+        let due = tasks.filter {
+            guard let date = $0.due else { return false }
+            return date <= now.addingTimeInterval(24 * 3600) && date >= now.addingTimeInterval(-7 * 86400)
+        }
+        var statements: [String] = []
+        if hasCalendarAccess {
+            statements.append("今日還有 \(upcoming.count) 項行程")
+        }
+        if hasReminderAccess {
+            statements.append("\(due.count) 項近期到期待辦")
+        }
+        if let next = upcoming.first(where: { !$0.isAllDay && $0.start > now }) {
+            statements.append("下一個安排是 \(next.start.formatted(date: .omitted, time: .shortened)) 的「\(next.title)」")
+        }
+        return ButlerDailyBriefing(
+            headline: "今日概覽",
+            summary: statements.joined(separator: "；") + "。"
+        )
+    }
+}
+
 // MARK: - Editable on-device living memory
 
 struct ButlerMemoryFact: Identifiable, Codable, Equatable {
@@ -272,6 +314,7 @@ enum ButlerIntelligentCardParser {
     /// A complete, non-streaming, standalone fenced block only.
     /// Content is display-only. No HTML, scripts, links, or model-defined actions.
     static func parse(_ markdown: String) -> ButlerIntelligentCard? {
+        guard markdown.utf8.count <= 16_000 else { return nil }
         let trimmed = markdown.trimmingCharacters(in: .whitespacesAndNewlines)
         let prefix = "\u{0060}\u{0060}\u{0060}butler-card\n"
         let suffix = "\n\u{0060}\u{0060}\u{0060}"
@@ -355,9 +398,14 @@ struct ButlerTodayView: View {
                     VStack(alignment: .leading, spacing: 6) {
                         Text(Date.now.formatted(.dateTime.weekday(.wide).month(.wide).day()))
                             .font(.subheadline).foregroundStyle(.secondary)
-                        Text("今天，為你安排妥當。")
+                        let briefing = ButlerBriefingComposer.compose(
+                            now: Date(), events: model.events, tasks: model.tasks,
+                            hasCalendarAccess: model.calendarAuthorized,
+                            hasReminderAccess: model.remindersAuthorized
+                        )
+                        Text(briefing.headline)
                             .font(.system(size: 28, weight: .semibold))
-                        Text("只根據已授權的本機資料提供建議。")
+                        Text(briefing.summary)
                             .font(.subheadline).foregroundStyle(.secondary)
                     }
 
