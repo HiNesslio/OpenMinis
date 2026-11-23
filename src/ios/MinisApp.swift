@@ -447,9 +447,14 @@ struct MinisApp: App {
                     // main app, FileProvider extension, and iSH bind mount all
                     // agree on which directory holds the user's shared files.
                     Self.logFPSyncTracePaths()
-                    // Start watching shared/skills/memory subtrees so iSH writes
-                    // and FileBrowserView mutations propagate to the Files app.
-                    AppGroupChangeWatcher.shared.start()
+                    // Only shared App Group directories can be watched for
+                    // the system Files provider. Personal Team builds have no
+                    // shared container or functioning FileProvider extension.
+                    if FileManager.default.containerURL(
+                        forSecurityApplicationGroupIdentifier: SharedContainerStore.appGroupID
+                    ) != nil {
+                        AppGroupChangeWatcher.shared.start()
+                    }
                     // Activate security scopes for user-mounted external folders
                     // (e.g. Obsidian vault in iCloud Drive). Held for app lifetime.
                     MountedFoldersManager.shared.activateAll()
@@ -813,6 +818,26 @@ struct MinisApp: App {
     }
 
     private static func registerFileProviderDomain() {
+        // A locally signed Personal Team build deliberately has no App Group
+        // entitlement. Its on-device memory/skills/shared folders still need
+        // durable local storage, but the FileProvider extension cannot read it.
+        // Do not register an extension that would crash or advertise empty files.
+        if FileManager.default.containerURL(
+            forSecurityApplicationGroupIdentifier: SharedContainerStore.appGroupID
+        ) == nil {
+            let root = AIChatViewModel.minisAppGroupRoot
+            for sub in ["memory", "skills", "shared"] {
+                try? FileManager.default.createDirectory(
+                    at: root.appendingPathComponent(sub, isDirectory: true),
+                    withIntermediateDirectories: true
+                )
+            }
+            // Preserve first-run Soul setup even without FileProvider.
+            SoulStore.ensureExists()
+            SoulStore.refreshCache()
+            lifecycleLog.warning("[FileProvider] App Group entitlement unavailable; using private app-sandbox storage. Files/Share extensions are disabled in PersonalDev.")
+            return
+        }
         logAppUpdateMarkerForFPTrace()
 
         // [T-ios-fp-mac-bootcrash] Circuit breaker, NOT a blanket disable.
@@ -1021,6 +1046,9 @@ struct MinisApp: App {
     }
 
     private static func signalFileProvider() {
+        guard FileManager.default.containerURL(
+            forSecurityApplicationGroupIdentifier: SharedContainerStore.appGroupID
+        ) != nil else { return }
         NSFileProviderManager(for: fileProviderDomain)?.signalEnumerator(for: .rootContainer) { error in
             if let error {
                 lifecycleLog.warning("[FileProvider] signal failed: \(error.localizedDescription)")
@@ -1177,8 +1205,14 @@ struct MinisApp: App {
     /// 4. Old App Group MinisShared/ → App Group MinisFileProvider/shared/
     private static func migrateSharedDirToAppGroup() {
         let fm = FileManager.default
-        let library = fm.urls(for: .libraryDirectory, in: .userDomainMask).first!
-        let container = fm.containerURL(forSecurityApplicationGroupIdentifier: "group.com.openminis.app")!
+        // This is a move (and deletes empty source directories). Never run
+        // against the local PersonalDev fallback: it is not the App Group,
+        // and a later entitlement upgrade must not lose legacy user files.
+        guard let container = fm.containerURL(
+            forSecurityApplicationGroupIdentifier: SharedContainerStore.appGroupID
+        ), let library = fm.urls(for: .libraryDirectory, in: .userDomainMask).first else {
+            return
+        }
 
         let migrations: [(source: URL, dest: URL, label: String)] = [
             // Legacy Library/MinisChat/shared → new shared
