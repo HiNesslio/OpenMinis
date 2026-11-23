@@ -27,6 +27,14 @@ set -euo pipefail
 
 GO_TAGS="${GO_TAGS-ts_omit_logtail,ts_omit_portmapper}"
 
+# This repository pins go-json-experiment/json to its Aug 2025 API. Go 1.27
+# enables stdlib JSON v2 by default, where SkipFunc and DiscardUnknownMembers
+# were removed. The pinned module's alias.go then fails to compile.
+# Use the original JSON implementation for this native Rclone build only.
+# Respect an explicit caller override to enable experimentation.
+: "${GOEXPERIMENT:=nojsonv2}"
+export GOEXPERIMENT
+
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SRC="$ROOT/deps/rclone-mobile"
 OUT="$ROOT/deps/frameworks"
@@ -55,7 +63,7 @@ build_slice() {
       -o "$BUILD/$tag/librclone.a" ./librclone
 }
 
-echo "==> $(go version) tags='${GO_TAGS}'"
+echo "==> $(go version) tags='${GO_TAGS}' GOEXPERIMENT='${GOEXPERIMENT}'"
 
 build_slice iphoneos          "-miphoneos-version-min=16.0"        device
 build_slice iphonesimulator   "-mios-simulator-version-min=16.0"   simulator
