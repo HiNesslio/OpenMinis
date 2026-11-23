@@ -163,3 +163,8 @@ src/android/app/libs/rclone.aar
 deps/aot/*.S
 deps/aot/.build/
 deps/aot/.build-iphonesimulator/
+
+# Local iOS signing and provider configuration (never commit team-specific values)
+src/ios/Configs/ProviderCustomization.xcconfig
+src/ios/Configs/PersonalDev.entitlements
+src/ios/Minis.xcodeproj/project.pbxproj.personal-dev.bak
