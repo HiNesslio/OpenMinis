@@ -8,6 +8,7 @@ against a production branch for App Store distribution.
 Usage:
   python3 scripts/configure_ios_personal_dev.py \
       --bundle-id com.example.myminis --team YOUR10CHARTEAMID
+  python3 scripts/configure_ios_personal_dev.py --set-team YOUR10CHARTEAMID
   python3 scripts/configure_ios_personal_dev.py --reset
 """
 import argparse
@@ -113,6 +114,37 @@ def configure(bundle_id: str, team: Optional[str]) -> None:
     print("Next: bash scripts/prepare_ios_device_deps.sh; then open src/ios/Minis.xcodeproj")
 
 
+def set_team_only(team: str) -> None:
+    """Set the same Apple Team on all targets, retaining existing local bundle IDs."""
+    if not re.fullmatch(r"[A-Z0-9]{10}", team):
+        raise SystemExit("Team ID must be a 10-character Apple Developer Team ID.")
+    if not ENTITLEMENTS.exists() or not PROJECT.exists():
+        raise SystemExit(
+            "Local PersonalDev configuration is missing. Run --bundle-id first "
+            "as described in docs/BUTLER_IOS_BUILD.md."
+        )
+    content = PROJECT.read_text(encoding="utf-8")
+    if "CODE_SIGN_ENTITLEMENTS = Configs/PersonalDev.entitlements;" not in content:
+        raise SystemExit(
+            "Project is not in the PersonalDev signing mode. "
+            "Run --bundle-id first; no changes made."
+        )
+    changed, count = re.subn(
+        r'DEVELOPMENT_TEAM = (?:""|[A-Z0-9]{10});',
+        f"DEVELOPMENT_TEAM = {team};",
+        content
+    )
+    if count < 8:
+        raise SystemExit(
+            f"Only {count} target configurations matched. No changes made. "
+            "Check the project Signing & Capabilities manually."
+        )
+    PROJECT.write_text(changed, encoding="utf-8")
+    print(f"Assigned Apple Team {team} in {count} project build configurations.")
+    print("Your existing Bundle IDs, local preferences and custom configuration were kept.")
+    print("In Xcode: Product > Clean Build Folder, then build for your iPhone.")
+
+
 def reset() -> None:
     if not BACKUP.exists():
         raise SystemExit("No local signing backup found; nothing to restore.")
@@ -128,10 +160,14 @@ def main() -> None:
     parser.add_argument("--bundle-id", help="Unique reverse-DNS app ID, e.g. com.example.minisdev")
     parser.add_argument("--team", help="Optional 10-character Apple Developer Team ID")
     parser.add_argument("--reset", action="store_true", help="Restore the original Xcode project")
+    parser.add_argument("--set-team", help="Set Team on already configured local project without altering Bundle IDs")
     args = parser.parse_args()
 
     if args.reset:
         reset()
+        return
+    if args.set_team:
+        set_team_only(args.set_team)
         return
     if not args.bundle_id:
         parser.error("--bundle-id is required unless --reset is given")
