@@ -43,8 +43,17 @@ for item in FFmpeg libavcodec libavformat libavutil libavfilter libswresample li
   [ -d "deps/frameworks/$item.xcframework" ] || \
     fail "Missing deps/frameworks/$item.xcframework after build"
 done
-[ -f deps/resources/alpine-rootfs.zip ] || \
-  fail "Missing deps/resources/alpine-rootfs.zip"
+[ -s deps/resources/alpine-rootfs.zip ] || \
+  fail "Missing deps/resources/alpine-rootfs.zip (run bash deps/prepare_alpine_rootfs.sh)"
+[ -f deps/resources/RootfsPatch.bundle/manifest.plist ] || \
+  fail "Missing deps/resources/RootfsPatch.bundle (run bash deps/build_ish.sh)"
+for lib in libish.a libish_emu.a libfakefs.a libish_aot.a; do
+  [ -s "deps/libs/$lib" ] || \
+    fail "Missing deps/libs/$lib (run bash deps/build_ish.sh)"
+done
+if ! unzip -tq deps/resources/alpine-rootfs.zip >/dev/null; then
+  fail "Alpine rootfs ZIP exists but is corrupt (rerun bash deps/prepare_alpine_rootfs.sh)"
+fi
 
 echo ""
 echo "Native iOS dependencies are available. Open src/ios/Minis.xcodeproj"
