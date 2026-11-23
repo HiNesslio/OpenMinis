@@ -223,9 +223,45 @@ final class ButlerTodayModel: ObservableObject {
         ButlerDecisionEngine.evaluate(now: Date(), events: events, tasks: tasks)
     }
 
+    // iOS 17 splits EventKit into full and write-only access. iOS 16 uses the
+    // older requestAccess API, which must remain available for this target's
+    // iOS 16 deployment minimum.
+    private func requestReadAccess(to entity: EKEntityType) async throws -> Bool {
+        if #available(iOS 17.0, *) {
+            switch entity {
+            case .event:
+                return try await store.requestFullAccessToEvents()
+            case .reminder:
+                return try await store.requestFullAccessToReminders()
+            @unknown default:
+                return false
+            }
+        } else {
+            return try await withCheckedThrowingContinuation { continuation in
+                store.requestAccess(to: entity) { granted, requestError in
+                    if let requestError {
+                        continuation.resume(throwing: requestError)
+                    } else {
+                        continuation.resume(returning: granted)
+                    }
+                }
+            }
+        }
+    }
+
+    private static func hasReadAccess(to entity: EKEntityType) -> Bool {
+        let status = EKEventStore.authorizationStatus(for: entity)
+        if #available(iOS 17.0, *) {
+            // .writeOnly is deliberately excluded: it cannot read the agenda.
+            return status == .fullAccess
+        } else {
+            return status == .authorized
+        }
+    }
+
     func requestCalendar() async {
         do {
-            guard try await store.requestFullAccessToEvents() else {
+            guard try await requestReadAccess(to: .event) else {
                 error = "尚未獲得日曆讀取權限。"
                 return
             }
@@ -237,7 +273,7 @@ final class ButlerTodayModel: ObservableObject {
 
     func requestReminders() async {
         do {
-            guard try await store.requestFullAccessToReminders() else {
+            guard try await requestReadAccess(to: .reminder) else {
                 error = "尚未獲得提醒事項讀取權限。"
                 return
             }
@@ -253,8 +289,8 @@ final class ButlerTodayModel: ObservableObject {
         let end = Calendar.current.date(byAdding: .day, value: 1, to: start)
             ?? start.addingTimeInterval(86400)
 
-        calendarAuthorized = EKEventStore.authorizationStatus(for: .event) == .fullAccess
-        remindersAuthorized = EKEventStore.authorizationStatus(for: .reminder) == .fullAccess
+        calendarAuthorized = Self.hasReadAccess(to: .event)
+        remindersAuthorized = Self.hasReadAccess(to: .reminder)
 
         if calendarAuthorized {
             let predicate = store.predicateForEvents(withStart: start, end: end, calendars: nil)
@@ -562,7 +598,7 @@ struct ButlerTodayView: View {
                 }
             }
             .task { await model.refresh() }
-            .onChange(of: model.events) { _, events in
+            .onChange(of: model.events) { events in
                 if localNotificationsEnabled {
                     Task { notificationStatus = await ButlerLocalNotifications.sync(events: events) }
                 }
