@@ -373,6 +373,12 @@ extension ContentView {
             if !isSelecting {
                 Menu {
                     Button {
+                        activeToolSheet = .butlerToday
+                    } label: {
+                        Label("Today · Personal Butler", systemImage: "sun.max")
+                    }
+                    Divider()
+                    Button {
                         showTerminal = true
                     } label: {
                         Label("Shell Terminal", systemImage: "terminal")
