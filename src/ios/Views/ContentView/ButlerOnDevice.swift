@@ -229,19 +229,24 @@ final class ButlerTodayModel: ObservableObject {
         }
 
         if remindersAuthorized {
-            let predicate = store.predicateForIncompleteReminders(withDueDateStarting: nil, ending: end, calendars: nil)
-            let fetched: [EKReminder] = await withCheckedContinuation { continuation in
+            let lower = Calendar.current.date(byAdding: .day, value: -7, to: start) ?? start
+            let predicate = store.predicateForIncompleteReminders(
+                withDueDateStarting: lower, ending: end, calendars: nil
+            )
+            // Convert non-Sendable EventKit objects into value types in the callback.
+            let fetched: [ButlerTaskItem] = await withCheckedContinuation { continuation in
                 store.fetchReminders(matching: predicate) { reminders in
-                    continuation.resume(returning: reminders ?? [])
+                    let mapped = (reminders ?? []).map {
+                        ButlerTaskItem(
+                            id: $0.calendarItemIdentifier,
+                            title: $0.title ?? "未命名待辦",
+                            due: $0.dueDateComponents.flatMap { Calendar.current.date(from: $0) }
+                        )
+                    }
+                    continuation.resume(returning: mapped)
                 }
             }
-            tasks = fetched.map {
-                ButlerTaskItem(
-                    id: $0.calendarItemIdentifier,
-                    title: $0.title ?? "未命名待辦",
-                    due: $0.dueDateComponents.flatMap { Calendar.current.date(from: $0) }
-                )
-            }
+            tasks = fetched
         } else {
             tasks = []
         }
