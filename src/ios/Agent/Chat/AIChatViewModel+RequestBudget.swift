@@ -414,23 +414,36 @@ extension AIChatViewModel {
             .appendingPathComponent("browser", isDirectory: true)
     }
 
-    /// App Group container root for FileProvider-visible directories.
-    /// Everything under this path is exposed to iOS Files via the replicated
-    /// FileProvider extension. Keep ONLY user-facing subdirs (shared, skills,
-    /// memory) here — anything else leaks into "On My iPhone → Minis".
-    nonisolated static var minisAppGroupRoot: URL {
-        FileManager.default.containerURL(
+    /// Shared container when the signing profile grants App Groups, otherwise
+    /// a private, durable on-device location for Personal Team test builds.
+    ///
+    /// The local fallback cannot be read by a Share/FileProvider extension.
+    /// Never use it as a substitute for actually enabling App Groups in a
+    /// distributed build. It deliberately has a different root name so a later
+    /// entitlement change cannot silently overwrite existing files.
+    nonisolated static var minisStorageContainerRoot: URL {
+        let fm = FileManager.default
+        if let group = fm.containerURL(
             forSecurityApplicationGroupIdentifier: SharedContainerStore.appGroupID
-        )!.appendingPathComponent("MinisFileProvider", isDirectory: true)
+        ) {
+            return group
+        }
+        let appSupport = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            ?? fm.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support", isDirectory: true)
+        return appSupport.appendingPathComponent("MinisPersonalDev", isDirectory: true)
     }
 
-    /// App Group subdirectory for private metadata that must NOT be exposed
-    /// to iOS Files (mounted-folders.json, FileProvider extension logs, etc).
-    /// Sibling of `minisAppGroupRoot` inside the same App Group container.
+    /// Root for user-facing shared, skills and memory directories.
+    /// In production this is an App Group directory visible to FileProvider.
+    /// Personal Team builds use the private app sandbox (no Files integration).
+    nonisolated static var minisAppGroupRoot: URL {
+        minisStorageContainerRoot.appendingPathComponent("MinisFileProvider", isDirectory: true)
+    }
+
+    /// Private config directory, sibling to the shared/skills/memory root.
+    /// Keep MCP credentials and other private metadata OUTSIDE FileProvider.
     nonisolated static var minisConfigRoot: URL {
-        let url = FileManager.default.containerURL(
-            forSecurityApplicationGroupIdentifier: SharedContainerStore.appGroupID
-        )!.appendingPathComponent("MinisConfig", isDirectory: true)
+        let url = minisStorageContainerRoot.appendingPathComponent("MinisConfig", isDirectory: true)
         try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
         return url
     }
