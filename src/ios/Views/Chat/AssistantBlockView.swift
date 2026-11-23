@@ -139,6 +139,9 @@ struct AssistantBlockView: View {
 
     @ViewBuilder
     private var textBlockView: some View {
+        if let card = ButlerIntelligentCardParser.parse(block.content), !isActiveMessage {
+            ButlerIntelligentCardView(card: card)
+        } else {
         SelectableMarkdownView(
             markdown: block.content,
             cachedContent: block.cachedMarkdown,
@@ -153,6 +156,7 @@ struct AssistantBlockView: View {
         )
         .fixedSize(horizontal: false, vertical: true)
         .modifier(MinisOpenURLHandler())
+        }
     }
 }
 
