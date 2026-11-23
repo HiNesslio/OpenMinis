@@ -27,6 +27,16 @@ git submodule update --init --recursive
 [ -d deps/ish ] && [ -e deps/ish/meson.build ] || \
   fail "iSH submodule is still missing or incomplete (deps/ish)."
 
+# RootfsPatch is a checked-in iSH asset, not a compiled product.
+# Stage it now so Xcode has the resource even if a later native build fails.
+[ -f deps/ish/app/RootfsPatch.bundle/manifest.plist ] || \
+  fail "Missing pinned iSH RootfsPatch bundle. Run git submodule update --init --recursive."
+mkdir -p deps/resources
+ditto deps/ish/app/RootfsPatch.bundle deps/resources/RootfsPatch.bundle
+[ -f deps/resources/RootfsPatch.bundle/manifest.plist ] || \
+  fail "Failed to stage RootfsPatch.bundle from iSH submodule."
+echo "==> RootfsPatch.bundle staged"
+
 echo "==> Building LAME, then FFmpeg XCFrameworks for iOS device"
 bash deps/build_lame.sh
 bash deps/build_ffmpeg.sh
