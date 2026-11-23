@@ -32,7 +32,15 @@ SRC="$ROOT/deps/rclone-mobile"
 OUT="$ROOT/deps/frameworks"
 BUILD="$ROOT/deps/build/rclone"
 
-command -v go >/dev/null || { echo "error: go toolchain not found" >&2; exit 1; }
+command -v go >/dev/null || { echo "error: go toolchain not found (brew install go)" >&2; exit 1; }
+command -v xcrun >/dev/null || { echo "error: Xcode command-line tools not found" >&2; exit 1; }
+command -v xcodebuild >/dev/null || { echo "error: xcodebuild not found" >&2; exit 1; }
+for sdk in iphoneos iphonesimulator; do
+  xcrun --sdk "$sdk" --show-sdk-path >/dev/null || {
+    echo "error: unable to find $sdk SDK. Select an installed Xcode in Xcode Settings > Locations." >&2
+    exit 1
+  }
+done
 
 mkdir -p "$BUILD" "$OUT"
 cd "$SRC"
@@ -40,6 +48,7 @@ cd "$SRC"
 build_slice() {
   local sdk="$1" minflag="$2" tag="$3"
   echo "==> $tag"
+  mkdir -p "$BUILD/$tag"
   CC="$(xcrun --sdk "$sdk" -f clang) -isysroot $(xcrun --sdk "$sdk" --show-sdk-path) $minflag -arch arm64" \
   CGO_ENABLED=1 GOOS=ios GOARCH=arm64 \
     go build -buildmode=c-archive -trimpath -ldflags="-s -w" ${GO_TAGS:+-tags "$GO_TAGS"} \
@@ -54,7 +63,11 @@ build_slice iphonesimulator   "-mios-simulator-version-min=16.0"   simulator
 # c-archive emits librclone.h next to each .a; both slices share one header.
 for t in device simulator; do
   mkdir -p "$BUILD/$t/include"
-  mv "$BUILD/$t/librclone.h" "$BUILD/$t/include/" 2>/dev/null || true
+  if [ ! -f "$BUILD/$t/librclone.a" ] || [ ! -s "$BUILD/$t/librclone.h" ]; then
+    echo "error: $t rclone archive or generated header is missing; inspect the Go build error above" >&2
+    exit 1
+  fi
+  mv "$BUILD/$t/librclone.h" "$BUILD/$t/include/"
 done
 
 rm -rf "$OUT/Rclone.xcframework"
@@ -62,6 +75,11 @@ xcodebuild -create-xcframework \
   -library "$BUILD/device/librclone.a"    -headers "$BUILD/device/include" \
   -library "$BUILD/simulator/librclone.a" -headers "$BUILD/simulator/include" \
   -output "$OUT/Rclone.xcframework" >/dev/null
+
+if [ ! -d "$OUT/Rclone.xcframework" ]; then
+  echo "error: XCFramework packaging completed without producing Rclone.xcframework" >&2
+  exit 1
+fi
 
 echo "==> $OUT/Rclone.xcframework"
 du -sh "$OUT/Rclone.xcframework" | awk '{print "    size:", $1}'
