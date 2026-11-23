@@ -73,6 +73,7 @@ private let draftLog = AppLogger(category: "DraftSession")
 /// Sheets triggered from the toolbar menu, consolidated into a single `.sheet(item:)`.
 enum ToolSheet: String, Identifiable {
     case settings
+    case butlerToday
     case rootfsManagement
     case browser
     case browserManagement
@@ -792,6 +793,8 @@ struct ContentView: View {
             switch sheet {
             case .settings:
                 SettingsSheet(showTerminal: $showTerminal)
+            case .butlerToday:
+                ButlerTodayView(onClose: { activeToolSheet = nil })
             case .rootfsManagement:
                 NavigationStack {
                     RootfsManagementView()
