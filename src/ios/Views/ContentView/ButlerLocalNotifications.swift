@@ -32,14 +32,14 @@ enum ButlerNotificationPlanner {
 enum ButlerLocalNotifications {
     private static let prefix = "butler.upcoming."
 
-    static func enableAndSync(events: [ButlerAgendaItem]) async -> String {
+    static func enableAndSync(events: [ButlerAgendaItem]) async -> (Bool, String) {
         do {
             let granted = try await UNUserNotificationCenter.current()
                 .requestAuthorization(options: [.alert, .sound])
-            guard granted else { return "通知權限未獲授予。" }
-            return await sync(events: events)
+            guard granted else { return (false, "通知權限未獲授予。") }
+            return (true, await sync(events: events))
         } catch {
-            return "無法啟用本機提醒：\(error.localizedDescription)"
+            return (false, "無法啟用本機提醒：\(error.localizedDescription)")
         }
     }
 
