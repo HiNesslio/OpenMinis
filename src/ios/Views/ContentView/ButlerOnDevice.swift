@@ -340,6 +340,8 @@ struct ButlerTodayView: View {
     @StateObject private var memory = ButlerMemoryStore()
     @State private var draftFact = ""
     @AppStorage("butlerMemoryShareWithAI") private var shareMemoryWithModel = false
+    @AppStorage("butlerLocalNotificationsEnabled") private var localNotificationsEnabled = false
+    @State private var notificationStatus = ""
 
     var body: some View {
         NavigationStack {
@@ -379,6 +381,25 @@ struct ButlerTodayView: View {
 
                     VStack(alignment: .leading, spacing: 12) {
                         title("今日行程", symbol: "calendar")
+                        Button(localNotificationsEnabled ? "關閉本機出發提醒" : "啟用本機行程提醒") {
+                            Task {
+                                if localNotificationsEnabled {
+                                    await ButlerLocalNotifications.disable()
+                                    localNotificationsEnabled = false
+                                    notificationStatus = "已停止本機行程提醒。"
+                                } else {
+                                    let (granted, status) = await ButlerLocalNotifications.enableAndSync(events: model.events)
+                                    localNotificationsEnabled = granted
+                                    notificationStatus = status
+                                }
+                            }
+                        }
+                        .font(.subheadline)
+                        Text("只根據已授權行程於開始前 30 分鐘提醒；開啟 App 後才更新往後行程。")
+                            .font(.caption).foregroundStyle(.secondary)
+                        if !notificationStatus.isEmpty {
+                            Text(notificationStatus).font(.caption).foregroundStyle(.secondary)
+                        }
                         if !model.calendarAuthorized {
                             permissionButton("連接 Apple 日曆", symbol: "calendar.badge.plus") {
                                 await model.requestCalendar()
@@ -484,6 +505,11 @@ struct ButlerTodayView: View {
                 }
             }
             .task { await model.refresh() }
+            .onChange(of: model.events) { _, events in
+                if localNotificationsEnabled {
+                    Task { notificationStatus = await ButlerLocalNotifications.sync(events: events) }
+                }
+            }
         }
     }
 
