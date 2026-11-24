@@ -496,6 +496,7 @@ private struct ChatTrailingMenu: View, Equatable {
 /// toolbar icon).
 struct ChatTrailingMenuButton: UIViewRepresentable {
     let messagesEmpty: Bool
+    let personalMode: Bool
     let hasSession: Bool
     let isForcePulling: Bool
     let iCloudSyncEnabled: Bool
@@ -544,6 +545,7 @@ struct ChatTrailingMenuButton: UIViewRepresentable {
     /// The displayed-state snapshot — the ONLY trigger for a menu rebuild.
     struct Key: Equatable {
         let messagesEmpty: Bool
+        let personalMode: Bool
         let hasSession: Bool
         let isForcePulling: Bool
         let iCloudSyncEnabled: Bool
@@ -559,7 +561,7 @@ struct ChatTrailingMenuButton: UIViewRepresentable {
     }
 
     fileprivate var key: Key {
-        Key(messagesEmpty: messagesEmpty, hasSession: hasSession,
+        Key(messagesEmpty: messagesEmpty, personalMode: personalMode, hasSession: hasSession,
             isForcePulling: isForcePulling, iCloudSyncEnabled: iCloudSyncEnabled,
             memoryEnabled: memoryEnabled, speakEnabled: speakEnabled,
             showEnhancedCacheToggle: showEnhancedCacheToggle,
@@ -639,6 +641,39 @@ struct ChatTrailingMenuButton: UIViewRepresentable {
     }
 
     fileprivate static func buildMenu(key: Key, coordinator: Coordinator) -> UIMenu {
+        if key.personalMode {
+            // Short conversation menu, native to iOS. Advanced Mode retains
+            // every existing utility and developer entry.
+            return UIMenu(children: [
+                UIMenu(options: .displayInline, children: [
+                    UIAction(title: AppLocalized("New Chat"),
+                             image: UIImage(systemName: "square.and.pencil")) { _ in
+                        coordinator.parent.onNewChat()
+                    },
+                    UIAction(title: AppLocalized("Share Chat…"),
+                             image: UIImage(systemName: "square.and.arrow.up"),
+                             attributes: key.messagesEmpty ? [.disabled] : []) { _ in
+                        coordinator.parent.onShare()
+                    },
+                    UIAction(title: AppLocalized("Search in Chat"),
+                             image: UIImage(systemName: "magnifyingglass"),
+                             attributes: key.messagesEmpty ? [.disabled] : []) { _ in
+                        coordinator.parent.onSearchInChat()
+                    },
+                ]),
+                UIMenu(options: .displayInline, children: [
+                    UIAction(title: AppLocalized("Memory"),
+                             image: UIImage(systemName: "brain.head.profile")) { _ in
+                        coordinator.parent.onMemories()
+                    },
+                    UIAction(title: AppLocalized("Clear Chat"),
+                             image: UIImage(systemName: "trash"),
+                             attributes: key.messagesEmpty ? [.disabled] : []) { _ in
+                        coordinator.parent.onClearChat()
+                    },
+                ])
+            ])
+        }
         var groups: [UIMenuElement] = []
 
         groups.append(UIMenu(options: .displayInline, children: [
