@@ -122,6 +122,33 @@ final class ButlerOnDeviceTests: XCTestCase {
         XCTAssertFalse(config.path.hasPrefix(exposed.path + "/"))
     }
 
+    func testConnectionsMarketplaceHasUniqueVerifiedCatalogEntries() {
+        let entries = MarketplaceEntry.featured
+        XCTAssertEqual(entries.count, 9)
+        XCTAssertEqual(Set(entries.map(\.id)).count, entries.count)
+        XCTAssertEqual(entries.filter { $0.kind == .native }.count, 3)
+        XCTAssertEqual(entries.filter { $0.kind == .mcp }.count, 3)
+        XCTAssertEqual(entries.filter { $0.kind == .skill }.count, 3)
+        for entry in entries {
+            switch entry.kind {
+            case .native:
+                XCTAssertNil(entry.endpoint)
+                XCTAssertNil(entry.skillURL)
+            case .mcp:
+                let url = URL(string: entry.endpoint ?? "")
+                XCTAssertEqual(url?.scheme, "https")
+                XCTAssertNotNil(url?.host)
+                XCTAssertNil(entry.skillURL)
+            case .skill:
+                let url = URL(string: entry.skillURL ?? "")
+                XCTAssertEqual(url?.scheme, "https")
+                XCTAssertEqual(url?.host, "github.com")
+                XCTAssertTrue(entry.skillURL?.hasSuffix("/SKILL.md") == true)
+                XCTAssertNil(entry.endpoint)
+            }
+        }
+    }
+
     func testPersonalModeOnlyChangesPresentationNotToolPermissions() {
         let defaults = UserDefaults.standard
         let key = PersonalAgentMode.advancedModeKey
