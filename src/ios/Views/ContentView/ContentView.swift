@@ -73,7 +73,6 @@ private let draftLog = AppLogger(category: "DraftSession")
 /// Sheets triggered from the toolbar menu, consolidated into a single `.sheet(item:)`.
 enum ToolSheet: String, Identifiable {
     case settings
-    case butlerToday
     case rootfsManagement
     case browser
     case browserManagement
@@ -801,8 +800,6 @@ struct ContentView: View {
             switch sheet {
             case .settings:
                 SettingsSheet(showTerminal: $showTerminal)
-            case .butlerToday:
-                ButlerTodayView(onClose: { activeToolSheet = nil })
             case .rootfsManagement:
                 NavigationStack {
                     RootfsManagementView()
@@ -1465,7 +1462,13 @@ struct ContentView: View {
             case 3:
                 break
             default:
-                if !sessions.isEmpty,
+                // On a fresh install, land in a real conversation rather
+                // than an empty session list; keep all existing preferences.
+                if sessions.isEmpty {
+                    var tx = Transaction()
+                    tx.disablesAnimations = true
+                    withTransaction(tx) { openSession(Self.makeNewSessionId()) }
+                } else if !sessions.isEmpty,
                    let latest = sessions.first,
                    Date().timeIntervalSince(latest.updatedAt) > 15 * 60 {
                     var tx = Transaction()
