@@ -207,7 +207,11 @@ private struct MarketplaceCatalogRow: View {
                     .lineLimit(2)
             }
             Spacer(minLength: 4)
-            if isInstalled {
+            if entry.kind == .native {
+                Text("原生")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            } else if isInstalled {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundStyle(.secondary)
                     .accessibilityLabel("已加入")
