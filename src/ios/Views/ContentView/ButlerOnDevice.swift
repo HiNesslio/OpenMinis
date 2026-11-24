@@ -783,18 +783,28 @@ enum ButlerAIBriefingService {
                 guard text.utf8.count <= 6_000 else { throw BriefingError.invalidResponse }
             }
         }
-        guard let responseData = text.trimmingCharacters(in: .whitespacesAndNewlines).data(using: .utf8),
+        let allowed = Set(insightFacts.compactMap { $0["ref"] })
+        guard let analysis = parseValidatedResponse(text, allowedInsightIds: allowed) else {
+            throw BriefingError.invalidResponse
+        }
+        return analysis
+    }
+
+    /// Pure boundary check. Unknown insight IDs and unbounded text never enter
+    /// the UI; the model response is display-only and has no action fields.
+    static func parseValidatedResponse(
+        _ raw: String, allowedInsightIds: Set<String>
+    ) -> ButlerAIAnalysis? {
+        guard raw.utf8.count <= 6_000,
+              let responseData = raw.trimmingCharacters(in: .whitespacesAndNewlines).data(using: .utf8),
               let analysis = try? JSONDecoder().decode(ButlerAIAnalysis.self, from: responseData),
               !analysis.headline.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
               !analysis.summary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
               analysis.headline.count <= 50,
               analysis.summary.count <= 240,
-              analysis.priorityInsightIds.count <= 3 else {
-            throw BriefingError.invalidResponse
-        }
-        let allowed = Set(insightFacts.compactMap { $0["ref"] })
-        guard Set(analysis.priorityInsightIds).isSubset(of: allowed) else {
-            throw BriefingError.invalidResponse
+              analysis.priorityInsightIds.count <= 3,
+              Set(analysis.priorityInsightIds).isSubset(of: allowedInsightIds) else {
+            return nil
         }
         return analysis
     }
@@ -830,6 +840,18 @@ struct ButlerChatBriefingView: View {
             hasCalendarAccess: context.calendarAuthorized,
             hasReminderAccess: context.remindersAuthorized
         )
+    }
+
+    private var prioritizedInsights: [ButlerInsight] {
+        let all = Array(context.insights.prefix(5))
+        let ids = analysis?.priorityInsightIds ?? []
+        let priority = ids.compactMap { ref -> ButlerInsight? in
+            guard ref.first == "I", let index = Int(ref.dropFirst()),
+                  all.indices.contains(index) else { return nil }
+            return all[index]
+        }
+        let remainder = all.filter { item in !priority.contains(where: { $0.id == item.id }) }
+        return Array((priority + remainder).prefix(3))
     }
 
     private var factsKey: String {
@@ -895,7 +917,7 @@ struct ButlerChatBriefingView: View {
                         }
 
                         if context.calendarAuthorized || context.remindersAuthorized {
-                            ForEach(Array(context.insights.prefix(3))) { insight in
+                            ForEach(prioritizedInsights) { insight in
                                 HStack(alignment: .top, spacing: 10) {
                                     Image(systemName: insight.kind.symbol)
                                         .font(.subheadline)
