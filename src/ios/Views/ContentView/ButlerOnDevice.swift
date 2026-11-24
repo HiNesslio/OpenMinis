@@ -864,124 +864,11 @@ struct ButlerChatBriefingView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Button {
-                withAnimation(.easeInOut(duration: 0.22)) { expanded.toggle() }
-            } label: {
-                HStack(spacing: 10) {
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundStyle(.secondary)
-                    Text("Today")
-                        .font(.subheadline.weight(.semibold))
-                    Text(analysis?.headline ?? baseline.headline)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    if isAnalyzing { ProgressView().controlSize(.mini) }
-                    Image(systemName: expanded ? "chevron.up" : "chevron.down")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.tertiary)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Today，每日行程及 AI 分析")
-            .accessibilityHint(expanded ? "收合今日簡報" : "展開今日簡報")
-
+            compactHeader
             if expanded {
                 Divider().padding(.horizontal, 16)
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text(Date().formatted(.dateTime.weekday(.wide).month(.wide).day()))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Text(analysis?.headline ?? baseline.headline)
-                            .font(.title3.weight(.semibold))
-                            .fixedSize(horizontal: false, vertical: true)
-                        Text(analysis?.summary ?? baseline.summary)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-
-                        if analysis != nil {
-                            Label("AI 分析 · 根據已授權的本機行程", systemImage: "checkmark.shield")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                        }
-
-                        if !context.calendarAuthorized || !context.remindersAuthorized {
-                            permissionActions
-                        }
-
-                        if context.calendarAuthorized || context.remindersAuthorized {
-                            ForEach(prioritizedInsights) { insight in
-                                HStack(alignment: .top, spacing: 10) {
-                                    Image(systemName: insight.kind.symbol)
-                                        .font(.subheadline)
-                                        .foregroundStyle(.secondary)
-                                        .frame(width: 18)
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(insight.title).font(.subheadline.weight(.medium))
-                                        Text(insight.detail)
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                            .fixedSize(horizontal: false, vertical: true)
-                                    }
-                                    Spacer(minLength: 0)
-                                }
-                                .padding(12)
-                                .background(Color(uiColor: .secondarySystemBackground),
-                                            in: RoundedRectangle(cornerRadius: 12))
-                            }
-                        }
-                        if let error = context.error {
-                            Text(error).font(.caption).foregroundStyle(.red)
-                        }
-
-                        Divider()
-                        Toggle("允許 AI 分析今日行程", isOn: $aiConsent)
-                            .font(.subheadline)
-                        Text("啟用後會把已授權的今日行程及待辦摘要送至你所選的 AI 供應商。預設關閉；不會自動使用位置、交通或天氣資料。")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                        if aiConsent {
-                            HStack {
-                                Button("重新分析") { Task { await runAI(force: true) } }
-                                    .disabled(isAnalyzing || !hasLoaded)
-                                Spacer()
-                                if isAnalyzing {
-                                    Text("正在分析").font(.caption).foregroundStyle(.secondary)
-                                }
-                            }
-                            .font(.subheadline)
-                        }
-                        if let analysisError {
-                            Text(analysisError)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        Toggle("行程開始前 30 分鐘提醒", isOn: $localNotificationsEnabled)
-                            .font(.subheadline)
-                            .onChange(of: localNotificationsEnabled) { enabled in
-                                Task {
-                                    if enabled {
-                                        let (granted, _) = await ButlerLocalNotifications.enableAndSync(events: context.events)
-                                        if !granted { localNotificationsEnabled = false }
-                                    } else {
-                                        await ButlerLocalNotifications.disable()
-                                    }
-                                }
-                            }
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 14)
-                }
-                .frame(maxHeight: isConversationEmpty ? 290 : 230)
-                .transition(.opacity.combined(with: .move(edge: .top)))
+                expandedContent
+                    .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
         .frame(maxWidth: 700)
@@ -1004,6 +891,145 @@ struct ButlerChatBriefingView: View {
         }
         .onChange(of: scenePhase) { phase in
             if phase == .active { Task { await refresh() } }
+        }
+    }
+
+    /// Own type-checking boundary for the always-visible 44pt strip.
+    private var compactHeader: some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.22)) { expanded.toggle() }
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(.secondary)
+                Text("Today")
+                    .font(.subheadline.weight(.semibold))
+                Text(analysis?.headline ?? baseline.headline)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                if isAnalyzing { ProgressView().controlSize(.mini) }
+                Image(systemName: expanded ? "chevron.up" : "chevron.down")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Today，每日行程及 AI 分析")
+        .accessibilityHint(expanded ? "收合今日簡報" : "展開今日簡報")
+    }
+
+    private var expandedContent: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                briefingIntroduction
+                if !context.calendarAuthorized || !context.remindersAuthorized {
+                    permissionActions
+                }
+                if !prioritizedInsights.isEmpty {
+                    sourceInsightCards
+                } else if context.calendarAuthorized || context.remindersAuthorized {
+                    Text("暫時沒有需要特別留意的行程衝突或到期事項。")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                if let error = context.error {
+                    Text(error).font(.caption).foregroundStyle(.red)
+                }
+                Divider()
+                briefingPreferences
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+        }
+        .frame(maxHeight: isConversationEmpty ? 290 : 230)
+    }
+
+    private var briefingIntroduction: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(Date().formatted(.dateTime.weekday(.wide).month(.wide).day()))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text(analysis?.headline ?? baseline.headline)
+                .font(.title3.weight(.semibold))
+                .fixedSize(horizontal: false, vertical: true)
+            Text(analysis?.summary ?? baseline.summary)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            if analysis != nil {
+                Label("AI 分析 · 根據已授權的本機行程", systemImage: "checkmark.shield")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private var sourceInsightCards: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ForEach(prioritizedInsights) { insight in
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: insight.kind.symbol)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .frame(width: 18)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(insight.title).font(.subheadline.weight(.medium))
+                        Text(insight.detail)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(12)
+                .background(Color(uiColor: .secondarySystemBackground),
+                            in: RoundedRectangle(cornerRadius: 12))
+            }
+        }
+    }
+
+    private var briefingPreferences: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            Toggle("允許 AI 分析今日行程", isOn: $aiConsent)
+                .font(.subheadline)
+            Text("啟用後會把已授權的今日行程及待辦摘要送至你所選的 AI 供應商。預設關閉；不會自動使用位置、交通或天氣資料。")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            if aiConsent {
+                HStack {
+                    Button("重新分析") { Task { await runAI(force: true) } }
+                        .disabled(isAnalyzing || !hasLoaded)
+                    Spacer()
+                    if isAnalyzing {
+                        Text("正在分析").font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+                .font(.subheadline)
+            }
+            if let analysisError {
+                Text(analysisError)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Toggle("行程開始前 30 分鐘提醒", isOn: $localNotificationsEnabled)
+                .font(.subheadline)
+                .onChange(of: localNotificationsEnabled) { enabled in
+                    Task {
+                        if enabled {
+                            let (granted, _) = await ButlerLocalNotifications.enableAndSync(events: context.events)
+                            if !granted { localNotificationsEnabled = false }
+                        } else {
+                            await ButlerLocalNotifications.disable()
+                        }
+                    }
+                }
         }
     }
 
