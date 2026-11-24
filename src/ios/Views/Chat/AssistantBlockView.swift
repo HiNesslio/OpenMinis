@@ -39,7 +39,15 @@ struct AssistantBlockView: View {
         if !advancedMode && isTechnicalBlock {
             EmptyView()
         } else {
-            switch block.kind {
+            technicalOrTextContent
+        }
+    }
+
+    // Separate ViewBuilder keeps the mode toggle from amplifying the large
+    // existing tool-capsule switch during Swift generic type checking.
+    @ViewBuilder
+    private var technicalOrTextContent: some View {
+        switch block.kind {
         case .text:
             if !block.content.isEmpty {
                 textBlockView
@@ -147,7 +155,6 @@ struct AssistantBlockView: View {
                 } label: {
                     Label(AppLocalized("Copy Error"), systemImage: "doc.on.doc")
                 }
-            }
             }
         }
     }
