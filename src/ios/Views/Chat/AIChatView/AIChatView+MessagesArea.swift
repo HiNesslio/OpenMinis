@@ -87,20 +87,9 @@ extension AIChatView {
                     .contentShape(Rectangle())
                     .onTapGesture { inputFocused = false }
             }
-            // Empty-chat onboarding tip: a single card explaining the
-            // per-session vs cross-session /var/minis/ layout. Only shown
-            // on a true draft (vm.sessionId == nil) — opening an existing
-            // session would otherwise flash the card during the brief
-            // window before its messages load. Returning users with any
-            // prior chat skip the tip even on a fresh draft (so it's a
-            // genuine first-launch hint).
-            if vm.sessionId == nil
-                && vm.messages.isEmpty
-                && !vm.isLoadingSession
-                && (totalSessionCount ?? Int.max) == 0 {
-                EmptyChatDirectoryTimeline(onBrowse: { showFileBrowser = true })
-                    .padding(.horizontal, 24)
-            }
+            // Personal Agent V2 replaces the first-run Linux directory guide
+            // with the source-grounded Today strip in AIChatView. The original
+            // advanced file browser remains available through Settings/Tools.
         }
         .overlay(alignment: .bottom) {
             // Open the overlay only when at least one button will actually
