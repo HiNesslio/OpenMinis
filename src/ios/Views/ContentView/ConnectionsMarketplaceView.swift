@@ -149,7 +149,7 @@ struct ConnectionsMarketplaceView: View {
                 .listRowBackground(Color.clear)
             }
 
-            Section(filter == .installed ? "已安裝的精選連接" : "精選連接") {
+            Section {
                 if visibleEntries.isEmpty {
                     Text("沒有符合條件的連接")
                         .foregroundStyle(.secondary)
@@ -161,9 +161,11 @@ struct ConnectionsMarketplaceView: View {
                         MarketplaceCatalogRow(entry: entry, isInstalled: isInstalled(entry))
                     }
                 }
+            } header: {
+                Text(filter == .installed ? "已安裝的精選連接" : "精選連接")
             }
 
-            Section("更多管理") {
+            Section {
                 NavigationLink {
                     MCPIntegrationsView()
                 } label: {
@@ -174,6 +176,8 @@ struct ConnectionsMarketplaceView: View {
                 } label: {
                     Label("管理已安裝技能", systemImage: "square.stack")
                 }
+            } header: {
+                Text("更多管理")
             } footer: {
                 Text("目錄只提供已知來源。安裝不代表已授權或成功連線；第三方服務需要完成登入及連線驗證。")
             }
