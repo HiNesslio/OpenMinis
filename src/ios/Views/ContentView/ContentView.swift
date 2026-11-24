@@ -369,6 +369,7 @@ struct ContentView: View {
 
     /// Launch screen preference: 0=Auto, 1=Last Session, 2=New Chat.
     @AppStorage("launchScreen") private var launchScreen: Int = 0
+    @AppStorage(PersonalAgentMode.advancedModeKey) var advancedMode = false
     /// FAB position preference: false = right (default), true = left.
     @AppStorage("fabOnLeft") var fabOnLeft = false
     /// Mirror of `SyncV2Bootstrap.isEnabled` so SwiftUI re-evaluates
