@@ -67,14 +67,9 @@ struct SettingsSheet: View {
                             Label("記憶", systemImage: "brain.head.profile")
                         }
                         NavigationLink {
-                            MCPIntegrationsView()
+                            ConnectionsMarketplaceView()
                         } label: {
-                            Label("連接服務", systemImage: "puzzlepiece.extension")
-                        }
-                        NavigationLink {
-                            SkillsManagementView()
-                        } label: {
-                            Label("技能", systemImage: "square.stack.3d.up")
+                            Label("探索連接與技能", systemImage: "square.grid.2x2")
                         }
                     }
                 }
