@@ -200,7 +200,7 @@ extension AIChatViewModel {
         // Advanced to Personal Mode. The schema gate alone cannot stop an
         // in-flight, model-generated shell/file/browser call: deny it at the
         // single dispatch entry before any side effects or argument repair.
-        if !AgentToolSwitch.isToolEnabled(tu.name) {
+        if !PersonalAgentMode.allowsTool(tu.name) {
             let blocked = "This developer tool is disabled in Personal Mode. Enable Advanced Mode in Settings only if you intentionally need it."
             if msgIdx < messages.count, blockIdx < messages[msgIdx].blocks.count {
                 messages[msgIdx].blocks[blockIdx].content = blocked
