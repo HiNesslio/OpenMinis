@@ -777,10 +777,22 @@ struct AIChatView: View {
         // below it. The banner observes the job registry and ticks in its own
         // view, so this body re-renders only when its height changes.
         .safeAreaInset(edge: .top, spacing: 0) {
-            topBanners
-                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
-                    if abs(height - topBannersHeight) > 0.5 { topBannersHeight = height }
+            // Astryx-style conversation chrome: system context sits above the
+            // message transcript, while the composer remains pinned below.
+            // Measure the combined inset; iOS 26 overlays the chat behind the
+            // navigation bar, so the collection view needs the *actual* height.
+            VStack(spacing: 0) {
+                topBanners
+                if remoteDeviceId == nil {
+                    ButlerChatBriefingView(
+                        vm: vm,
+                        isConversationEmpty: vm.messages.isEmpty && !vm.isLoadingSession
+                    )
                 }
+            }
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
+                if abs(height - topBannersHeight) > 0.5 { topBannersHeight = height }
+            }
         }
         .navigationBarTitleDisplayMode(.inline)
         // [T-ios-navbar-toolbar-host] The ENTIRE toolbar now lives inside an
