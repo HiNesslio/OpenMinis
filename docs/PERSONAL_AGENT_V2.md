@@ -12,7 +12,7 @@ This branch now contains code changes, not just a design:
 - The original separate Today toolbar sheet entry has been removed; a fresh empty install with Auto launch opens a new chat. Returning sessions and explicit launch settings remain intact.
 - Actual AI call: \`ButlerAIBriefingService.analyze\` in \`ButlerOnDevice.swift\` uses the selected OpenMinis \`AgentProvider.streamAgentMessage\` with **no tools**, \`thinkingLevel: .off\`, and a bounded JSON snapshot of authorized EventKit and Reminders facts. Its result is validated, source-reference IDs must be from the deterministic local insights, and any failure falls back to the deterministic briefing. **No AI request occurs without the explicit "允許 AI 分析今日行程" switch** (stored locally as \`butlerAIBriefingConsent\`; default off). The model still produces prose, which must be treated as an AI suggestion, not independently verified fact.
 - The chat top inset measures the **combined** scheduled-task banner and Today strip for iOS 26 compatibility. The first-run Linux directory onboarding is removed from the Personal UX.
-- Personal Mode defaults on in this V2 branch. \`PersonalAgentMode\` removes shell, file read/write/edit, image-read, browser and subagent tools from the model schema and refuses late/in-flight calls in the central runtime dispatcher; the separate Personal system prompt no longer encourages scripts or Python. Advanced Mode (Settings > Personal Agent > 進階模式) restores the underlying developer tool experience. Advanced settings, sidebar terminal and chat developer menu entries are hidden in Personal Mode.
+- Personal Mode defaults on as a **presentation preference**. All enabled Shell/Python, file, browser and subagent tools remain available to the model, while technical tool capsules, folded summaries, floating execution previews and reasoning blocks are hidden. The setting "顯示進階工具介面" reveals debug UI, not additional execution permissions.
 - A compact Personal Settings entry exposes Memory / Connections (existing MCP manager) / Skills; **this is a simplified entry point, not yet a curated one-click OAuth plugin market**.
 - \`ButlerOnDeviceTests.swift\` includes new pure JSON validation tests; Xcode/device compile and permission behavior have not been independently verified here.
 
@@ -21,7 +21,7 @@ Known limits and next steps:
 2. No durable AI briefing cache across chat sessions; entering multiple conversations after opting in may make repeated paid LLM calls. A per-source/model freshness cache is needed before wider release.
 3. Active-time/local notification only. iOS cannot guarantee that suspended app code runs AI periodically. Server/APNs optional later.
 4. MCP "連接服務" still opens the underlying technical manager, not a reviewed one-tap catalog. Per-connection action authorization and a native approval surface remain P1/P2.
-5. Personal Mode blocks canonical developer tools; review externally installed MCP capability permissions separately before treating arbitrary servers as trusted.
+5. Personal Mode only hides technical UI; original per-tool toggles, permission checks, confirmations and audit remain in force. Review separately installed MCP capabilities before trusting them.
 6. Review accessibility, keyboard/scroll ergonomics on physical iPhone and iPad, iOS 16 minimum, signing, offline response and error states.
 
 To fetch **this** branch while keeping the original Butler branch:
@@ -36,7 +36,7 @@ git switch --track origin/feat/personal-agent-v2
 
 Do not discard local Personal Team signing configuration or uncommitted files with \`git reset --hard\`. In Xcode choose Minis on a physical iPhone, Clean Build Folder, then Run. The native iSH/FFmpeg/Rclone binaries do not need rebuilding just for Swift code changes.
 
-Manual smoke check: open app on new install -> inline Today card in chat -> grant Calendar and Reminders -> baseline reflects actual data -> opt into AI analysis -> model returns a short AI summary, with no shell tool blocks -> collapse Today, send an ordinary chat message -> confirm composer/draft, Session History and notification preference still work -> switch Advanced Mode on/off -> verify menus and developer tool gating. Disable calendar permission in iOS Settings and re-open the app; stale private events/analysis must not remain visible.
+Manual smoke check: open app on new install -> inline Today card in chat -> grant Calendar and Reminders -> baseline reflects actual data -> opt into AI analysis -> model returns a short AI summary, with no shell tool blocks -> collapse Today, send an ordinary chat message -> confirm composer/draft, Session History and notification preference still work -> toggle advanced UI -> verify technical traces are hidden/shown without changing available model tools. Disable calendar permission in iOS Settings and re-open the app; stale private events/analysis must not remain visible.
 
 ## Product promise
 
@@ -60,7 +60,7 @@ Avoid "AI Generated" badges and gratuitous decorative cards. Cards must have sem
 - `src/ios/Views/ContentView/ButlerLocalNotifications.swift`: opt-in local notifications from known calendar event start minus 30 minutes. No persistent background intelligence.
 - `src/ios/Views/Chat/AssistantBlockView.swift`: current message block renderer, including text and developer-oriented tool/thinking blocks.
 - `src/ios/Agent/Chat/AIChatViewModel+SystemPrompt.swift`: explicitly prioritizes shell commands and developer tools; must have a separate Personal Mode prompt.
-- `src/ios/Agent/Chat/AIChatViewModel+ToolDefinitions.swift`: default `makeAgentTools()` exposes shell/file tools; hiding UI alone is **not sufficient**.
+- `src/ios/Agent/Chat/AIChatViewModel+ToolDefinitions.swift`: default `makeAgentTools()` retains shell/file/browser tooling. Personal Mode filters presentation, not model capabilities; normal permission and write confirmation gates remain essential.
 - `src/ios/Agent/Chat/AIChatViewModel+ProgrammaticPrompt.swift`: robust serialized programmatic prompt entry; useful for *explicit* agent jobs, but unsuitable for silently treating every brief as a user-authored message.
 - `src/ios/Views/Settings/SettingsSheet.swift`, `src/ios/Views/MCP/MCPIntegrationsView.swift`, `src/ios/Views/Skills/SkillsManagementView.swift`: technical management UIs and existing registry/stores to reuse.
 - `src/ios/MinisApp.swift`: FileProvider and background lifecycle integration. Personal Team signing has no App Group entitlement; platform features must retain guarded fallback paths.
@@ -151,11 +151,11 @@ Trigger gates: consent, trusted source, freshness, importance, duplicate suppres
 
 ## Personal Mode and Advanced Mode
 
-Personal Mode is the default experience. Remove the developer dashboard and shell/Python invocation indicators from the main chat, and **remove developer tools from tool schemas and dispatch authorization in Personal Mode**. A hidden UI alone is not a security control.
+Personal Mode is the default **chat presentation**, not a restricted agent runtime. The model retains its original Shell (including Python), file, browser, memory and subagent tools according to pre-existing individual tool and connection settings. It may use them when appropriate without displaying raw commands, thinking traces and per-tool capsules. It should explain outcomes in ordinary language and never falsely claim work was performed.
 
-Allowed Personal Mode capabilities: approved read-only native adapters and opted-in connected services; user-confirmed write actions through explicit typed dispatch. For a feature that fundamentally requires iSH/scripts, either provide a vetted native adapter or move it behind an explicit Advanced Mode approval.
+Advanced UI reveals the original execution capsules, terminal entry points, diagnostic details and technical settings. Toggling it does NOT grant or revoke tools. Permission, user approval for destructive/write operations, Keychain credentials, per-connection controls and audit logging must still operate regardless of which UI is visible. The interactive `user_ask` card and meaningful errors must remain visible.
 
-Advanced Mode: preserve original OpenMinis shell/file/browser/sub-agent experience, inspectable execution logs, developer settings, and explicit switch-on warnings. Mode changes must update the system prompt, tool schema, dispatcher and UI consistently. Existing explicit workflows remain intact; never silently run a developer workflow in Personal Mode.
+See [Marketplace design](PERSONAL_AGENT_MARKETPLACE.md) for the future unified MCP/Skills Connections implementation.
 
 ## Connections catalog / "Plugin Market"
 
