@@ -236,7 +236,7 @@ extension AIChatView {
 
     /// Whether the floating tool preview is visible.
     private var hasFloatingPreview: Bool {
-        hasAnyToolBlocks
+        advancedMode && hasAnyToolBlocks
     }
 
     /// Max content width — unconstrained in compact (portrait iPhone),
