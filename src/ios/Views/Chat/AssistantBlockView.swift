@@ -23,9 +23,23 @@ struct AssistantBlockView: View {
     @Binding var highlightedBlockId: UUID?
     @Binding var detailBlock: AssistantBlock?
     private var isHighlighted: Bool { highlightedBlockId == block.id }
+    @AppStorage(PersonalAgentMode.advancedModeKey) private var advancedMode = false
+
+    /// Technical tool and reasoning blocks stay in the message model and
+    /// audit/debug history. Personal Mode hides only their visual capsules.
+    /// Interactive user questions and normal error/info messages remain shown.
+    private var isTechnicalBlock: Bool {
+        switch block.kind {
+        case .text, .userAskTool, .info: return false
+        default: return true
+        }
+    }
 
     var body: some View {
-        switch block.kind {
+        if !advancedMode && isTechnicalBlock {
+            EmptyView()
+        } else {
+            switch block.kind {
         case .text:
             if !block.content.isEmpty {
                 textBlockView
@@ -133,6 +147,7 @@ struct AssistantBlockView: View {
                 } label: {
                     Label(AppLocalized("Copy Error"), systemImage: "doc.on.doc")
                 }
+            }
             }
         }
     }
