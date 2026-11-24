@@ -1,8 +1,42 @@
 # Personal Agent V2 — Product & Implementation Blueprint
 
-Status: **Design proposal; not implemented.**
+Status: **P0 implementation in progress on this branch; device build/runtime verification pending.**
 Base: `feat/ondevice-butler-foundation` (existing buildable Butler prototype; actual Xcode validation remains device-local).
 Working branch: `feat/personal-agent-v2`.
+
+## P0 implementation checkpoint (2026-11-24)
+
+This branch now contains code changes, not just a design:
+
+- The Today UI is presented as a **native, collapsible context card at the top of every local chat**, below navigation/status banners and above the message transcript, with the existing composer unchanged at the bottom. It is not yet a persisted chronological ChatStore message; implementing durable inline cards in the virtualized collection-view transcript remains follow-up work.
+- The original separate Today toolbar sheet entry has been removed; a fresh empty install with Auto launch opens a new chat. Returning sessions and explicit launch settings remain intact.
+- Actual AI call: \`ButlerAIBriefingService.analyze\` in \`ButlerOnDevice.swift\` uses the selected OpenMinis \`AgentProvider.streamAgentMessage\` with **no tools**, \`thinkingLevel: .off\`, and a bounded JSON snapshot of authorized EventKit and Reminders facts. Its result is validated, source-reference IDs must be from the deterministic local insights, and any failure falls back to the deterministic briefing. **No AI request occurs without the explicit "允許 AI 分析今日行程" switch** (stored locally as \`butlerAIBriefingConsent\`; default off). The model still produces prose, which must be treated as an AI suggestion, not independently verified fact.
+- The chat top inset measures the **combined** scheduled-task banner and Today strip for iOS 26 compatibility. The first-run Linux directory onboarding is removed from the Personal UX.
+- Personal Mode defaults on in this V2 branch. \`PersonalAgentMode\` removes shell, file read/write/edit, image-read, browser and subagent tools from the model schema and refuses late/in-flight calls in the central runtime dispatcher; the separate Personal system prompt no longer encourages scripts or Python. Advanced Mode (Settings > Personal Agent > 進階模式) restores the underlying developer tool experience. Advanced settings, sidebar terminal and chat developer menu entries are hidden in Personal Mode.
+- A compact Personal Settings entry exposes Memory / Connections (existing MCP manager) / Skills; **this is a simplified entry point, not yet a curated one-click OAuth plugin market**.
+- \`ButlerOnDeviceTests.swift\` includes new pure JSON validation tests; Xcode/device compile and permission behavior have not been independently verified here.
+
+Known limits and next steps:
+1. No persistent native card records in ChatStore; the Today strip is displayed **within** the chat UI, but is not a normal chronological message bubble.
+2. No durable AI briefing cache across chat sessions; entering multiple conversations after opting in may make repeated paid LLM calls. A per-source/model freshness cache is needed before wider release.
+3. Active-time/local notification only. iOS cannot guarantee that suspended app code runs AI periodically. Server/APNs optional later.
+4. MCP "連接服務" still opens the underlying technical manager, not a reviewed one-tap catalog. Per-connection action authorization and a native approval surface remain P1/P2.
+5. Personal Mode blocks canonical developer tools; review externally installed MCP capability permissions separately before treating arbitrary servers as trusted.
+6. Review accessibility, keyboard/scroll ergonomics on physical iPhone and iPad, iOS 16 minimum, signing, offline response and error states.
+
+To fetch **this** branch while keeping the original Butler branch:
+
+\`\`\`bash
+cd ~/Downloads/OpenMinis-Butler
+git status --short
+git fetch origin feat/personal-agent-v2
+git switch --track origin/feat/personal-agent-v2
+# If the local branch already exists: git switch feat/personal-agent-v2 && git pull --ff-only
+\`\`\`
+
+Do not discard local Personal Team signing configuration or uncommitted files with \`git reset --hard\`. In Xcode choose Minis on a physical iPhone, Clean Build Folder, then Run. The native iSH/FFmpeg/Rclone binaries do not need rebuilding just for Swift code changes.
+
+Manual smoke check: open app on new install -> inline Today card in chat -> grant Calendar and Reminders -> baseline reflects actual data -> opt into AI analysis -> model returns a short AI summary, with no shell tool blocks -> collapse Today, send an ordinary chat message -> confirm composer/draft, Session History and notification preference still work -> switch Advanced Mode on/off -> verify menus and developer tool gating. Disable calendar permission in iOS Settings and re-open the app; stale private events/analysis must not remain visible.
 
 ## Product promise
 
@@ -206,4 +240,4 @@ Avoid adding more monolithic ViewBuilders: the recent Xcode builds hit Swift typ
 - Apple BackgroundTasks docs: https://developer.apple.com/documentation/backgroundtasks/choosing-background-strategies-for-your-app
 - MCP authorization spec: https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization
 
-**Implementation scope of this commit:** design-only blueprint. The currently runnable Butler branch is deliberately unchanged.
+**Branch scope:** the original Butler foundation remains unchanged; the V2 branch now contains a P0 implementation slice plus this evolving blueprint. Build and device tests are pending.
