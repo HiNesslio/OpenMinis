@@ -1,6 +1,22 @@
 # Personal Agent — Connections / Plugin Marketplace Plan
 
-Status: architectural proposal, **not an implemented Marketplace**. Research verified 2026-11-24.
+Status: **P0 curated Marketplace implemented** on feat/personal-agent-v2; Xcode/device validation pending. Research verified 2026-11-24.
+
+## P0 implementation (2026-11-24)
+
+The branch includes ConnectionsMarketplaceView.swift inside the Xcode-synchronized ContentView folder. Settings > Personal Agent > 探索連接與技能 opens native search, category filtering, installed status, source details, consent and an installation flow.
+
+The nine reviewed starter entries are three native iOS capabilities (Calendar, Reminders, Memory); official remote MCP endpoints from Notion, Linear and Sentry; and three public Anthropic Skills (PDF, DOCX, XLSX). This is a curated catalog, not arbitrary live Registry ingestion.
+
+MCP onboarding stages an initially *disabled* server in MCPStore. Existing MCPFormSheet handles discovery, issuer review, OAuth/PKCE and Keychain. A sign-in success can enable the staged server. Installing a config is not equivalent to successful authorization; UI must distinguish those states. Existing server IDs pointing at different URLs are never silently overwritten.
+
+Skills use SkillStore.preflightGitHubImport before showing downloaded SKILL.md text in a review sheet; installation proceeds only on confirmation through the existing commitGitHubImport. Conflicting IDs from other sources are refused. Supporting files may download asynchronously and might require external packages; review scripts before use.
+
+The updated MCPFormSheet now persists discovery-created OAuth configuration before opening the sign-in session, and retains its authorized enabled state when saving. No new third-party SDK or backend was added. Existing technical MCP/Skills management remains available.
+
+Current limitations: no live MCP Registry or skills.sh search; no guaranteed remote tools/list probe at install time; the Skills preview covers only SKILL.md, not every sibling script; user-specific OAuth can vary across providers. Enabled indicates locally configured/authorized, not necessarily live service availability.
+
+Manual Xcode acceptance: navigate to 探索連接與技能, search/filter the nine entries, deny/grant iOS permissions, stage Notion/Linear/Sentry and complete/cancel OAuth, verify cancellation stays pending and successful connection enables tools, preview/install/disable a Skill, and verify Personal Chat can still use Shell/Browser privately. iOS 16 and Personal Team signing still require device tests. No Xcode build has been executed through GitHub.
 
 ## Product decision
 
