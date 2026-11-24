@@ -138,9 +138,14 @@ final class ButlerOnDeviceTests: XCTestCase {
         XCTAssertEqual(analysis?.headline, "有一項安排")
     }
 
-    func testAIBriefingRejectsOverlongOrNonJSONResponses() {
-        let oversized = String(repeating: "長", count: 241)
-        let response = #"{"headline":"今日","summary":""# + oversized + #"""" + #","priorityInsightIds":[]}"#
+    func testAIBriefingRejectsOverlongOrNonJSONResponses() throws {
+        let payload: [String: Any] = [
+            "headline": "今日",
+            "summary": String(repeating: "長", count: 241),
+            "priorityInsightIds": [String]()
+        ]
+        let encoded = try JSONSerialization.data(withJSONObject: payload)
+        let response = String(decoding: encoded, as: UTF8.self)
         XCTAssertNil(ButlerAIBriefingService.parseValidatedResponse(
             response, allowedInsightIds: []
         ))
