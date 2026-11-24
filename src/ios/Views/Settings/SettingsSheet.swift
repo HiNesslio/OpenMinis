@@ -51,10 +51,10 @@ struct SettingsSheet: View {
         NavigationStack(path: $navPath) {
             List {
                 Section("Personal Agent") {
-                    Toggle("進階模式", isOn: $advancedMode)
+                    Toggle("顯示進階工具介面", isOn: $advancedMode)
                     Text(advancedMode
-                         ? "已顯示開發者工具、終端機及進階設定。"
-                         : "聊天預設不執行 Shell、Python 或檔案操作。")
+                         ? "顯示工具執行詳情、終端機及開發者設定。"
+                         : "AI 仍可按需要使用工具，但對話會隱藏技術執行過程；敏感操作仍須授權。")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
