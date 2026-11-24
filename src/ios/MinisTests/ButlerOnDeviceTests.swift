@@ -122,6 +122,31 @@ final class ButlerOnDeviceTests: XCTestCase {
         XCTAssertFalse(config.path.hasPrefix(exposed.path + "/"))
     }
 
+    func testPersonalModeOnlyChangesPresentationNotToolPermissions() {
+        let defaults = UserDefaults.standard
+        let key = PersonalAgentMode.advancedModeKey
+        let previous = defaults.object(forKey: key)
+        defer {
+            if let previous {
+                defaults.set(previous, forKey: key)
+            } else {
+                defaults.removeObject(forKey: key)
+            }
+        }
+
+        defaults.set(false, forKey: key)
+        XCTAssertTrue(PersonalAgentMode.isEnabled)
+        XCTAssertTrue(AgentToolSwitch.isToolEnabled("shell_execute"))
+        XCTAssertTrue(AgentToolSwitch.isToolEnabled("file_read"))
+        XCTAssertTrue(AgentToolSwitch.isToolEnabled("file_write"))
+        XCTAssertTrue(AgentToolSwitch.isToolEnabled("file_edit"))
+
+        defaults.set(true, forKey: key)
+        XCTAssertFalse(PersonalAgentMode.isEnabled)
+        XCTAssertTrue(AgentToolSwitch.isToolEnabled("shell_execute"))
+        XCTAssertTrue(AgentToolSwitch.isToolEnabled("file_write"))
+    }
+
     func testAIBriefingRejectsUnknownPriorityReferences() {
         let json = #"{"headline":"今日重點","summary":"請查看已確認的行程","priorityInsightIds":["I8"]}"#
         XCTAssertNil(ButlerAIBriefingService.parseValidatedResponse(
