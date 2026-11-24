@@ -16,6 +16,9 @@ struct MCPFormSheet: View {
 
     /// nil = add mode; non-nil = edit the existing server (id locked).
     let server: MCPServerConfig?
+    /// Curated marketplace connections start with browser-based OAuth rather
+    /// than showing a developer-oriented auth configuration picker.
+    var prefersBrowserSignIn: Bool = false
 
     private enum Transport: String, CaseIterable, Identifiable {
         case http = "HTTP"
@@ -409,12 +412,21 @@ struct MCPFormSheet: View {
         oauthTokenEndpoint = outcome.config.tokenEndpoint
         oauthRedirectURI = outcome.config.redirectURI ?? MCPOAuthController.defaultRedirectURI
         oauthScopes = outcome.config.scopes ?? ""
+        // The discovery flow produces full, non-secret OAuth configuration.
+        // Persist it via the standard form's .oauthStatic code path before
+        // authorization; otherwise buildConfig() would omit oauth entirely.
+        authMode = .oauthStatic
         let config = buildConfig()
         store.add(config)
         guard let oauth = config.oauth else { return }
         do {
             try await MCPOAuthController.shared.authorize(server: config.id, oauth: oauth)
             isAuthorized = true
+            if prefersBrowserSignIn,
+               let saved = store.servers.first(where: { $0.id == config.id }),
+               !saved.enabled {
+                store.toggle(id: config.id)
+            }
             pendingDiscovery = nil
             discoveryNote = nil
         } catch MCPOAuthController.OAuthError.cancelled {
@@ -441,6 +453,11 @@ struct MCPFormSheet: View {
         do {
             try await MCPOAuthController.shared.authorize(server: config.id, oauth: oauth)
             isAuthorized = true
+            if prefersBrowserSignIn,
+               let saved = store.servers.first(where: { $0.id == config.id }),
+               !saved.enabled {
+                store.toggle(id: config.id)
+            }
         } catch {
             oauthError = error.localizedDescription
         }
@@ -695,6 +712,8 @@ struct MCPFormSheet: View {
                 MCPOAuthController.importPendingSecretIfAny(server: server.id)
                 oauthClientSecret = MCPOAuthController.clientSecret(server: server.id) ?? ""
                 isAuthorized = MCPOAuthController.isAuthorized(server: server.id)
+            } else if prefersBrowserSignIn {
+                authMode = .oauthBrowser
             }
         }
     }
