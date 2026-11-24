@@ -253,7 +253,10 @@ extension AIChatViewModel {
             tools.append(Self.userAskToolDefinition)
         }
 
-        return tools
+        // Personal Agent V2 is a conversational assistant, not a command
+        // runner. Strip developer tools from the model schema even though the
+        // old underlying iSH runtime stays installed for Advanced Mode.
+        return tools.filter { AgentToolSwitch.isToolEnabled($0.name) }
     }
 
 }
