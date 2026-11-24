@@ -723,6 +723,11 @@ struct MCPFormSheet: View {
     private func buildConfig() -> MCPServerConfig {
         let trimmedName = name.trimmingCharacters(in: .whitespaces)
         var config = MCPServerConfig(id: trimmedName, enabled: server?.enabled ?? true)
+        // Marketplace sign-in may have enabled the server after this sheet
+        // was presented. Saving must not reapply the captured disabled value.
+        if prefersBrowserSignIn && isAuthorized {
+            config.enabled = true
+        }
         let trimmedNote = note.trimmingCharacters(in: .whitespacesAndNewlines)
         config.note = trimmedNote.isEmpty ? nil : trimmedNote
 
