@@ -9,6 +9,7 @@
 
 import EventKit
 import SwiftUI
+import UIKit
 
 enum MarketplaceKind: String, CaseIterable, Identifiable {
     case native = "原生"
@@ -349,6 +350,15 @@ struct MarketplaceConnectionDetail: View {
                     Button(today.remindersAuthorized ? "重新整理" : "授權") {
                         Task { await today.requestReminders() }
                     }
+                }
+            }
+            if let error = today.error {
+                Text(error)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                if let settings = URL(string: UIApplication.openSettingsURLString) {
+                    Link("到 iOS 設定檢查權限", destination: settings)
+                        .font(.caption)
                 }
             }
         }
