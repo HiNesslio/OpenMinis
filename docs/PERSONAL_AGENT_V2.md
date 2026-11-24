@@ -13,14 +13,14 @@ This branch now contains code changes, not just a design:
 - Actual AI call: \`ButlerAIBriefingService.analyze\` in \`ButlerOnDevice.swift\` uses the selected OpenMinis \`AgentProvider.streamAgentMessage\` with **no tools**, \`thinkingLevel: .off\`, and a bounded JSON snapshot of authorized EventKit and Reminders facts. Its result is validated, source-reference IDs must be from the deterministic local insights, and any failure falls back to the deterministic briefing. **No AI request occurs without the explicit "允許 AI 分析今日行程" switch** (stored locally as \`butlerAIBriefingConsent\`; default off). The model still produces prose, which must be treated as an AI suggestion, not independently verified fact.
 - The chat top inset measures the **combined** scheduled-task banner and Today strip for iOS 26 compatibility. The first-run Linux directory onboarding is removed from the Personal UX.
 - Personal Mode defaults on as a **presentation preference**. All enabled Shell/Python, file, browser and subagent tools remain available to the model, while technical tool capsules, folded summaries, floating execution previews and reasoning blocks are hidden. The setting "顯示進階工具介面" reveals debug UI, not additional execution permissions.
-- A compact Personal Settings entry exposes Memory / Connections (existing MCP manager) / Skills; **this is a simplified entry point, not yet a curated one-click OAuth plugin market**.
+- The Personal Settings entry now opens a **native curated Connections Marketplace** (nine official/native starter entries), with search, installed status, MCP OAuth handoff and Skill source preview/confirmed import. Public Registry search remains a later phase. See the Marketplace document.
 - \`ButlerOnDeviceTests.swift\` includes new pure JSON validation tests; Xcode/device compile and permission behavior have not been independently verified here.
 
 Known limits and next steps:
 1. No persistent native card records in ChatStore; the Today strip is displayed **within** the chat UI, but is not a normal chronological message bubble.
 2. No durable AI briefing cache across chat sessions; entering multiple conversations after opting in may make repeated paid LLM calls. A per-source/model freshness cache is needed before wider release.
 3. Active-time/local notification only. iOS cannot guarantee that suspended app code runs AI periodically. Server/APNs optional later.
-4. MCP "連接服務" still opens the underlying technical manager, not a reviewed one-tap catalog. Per-connection action authorization and a native approval surface remain P1/P2.
+4. Marketplace P0 now supports a curated, reviewed catalog and existing OAuth/Skill import flows; live MCP Registry/Skills directories, automated capability audits and full per-tool authorization remain P1/P2.
 5. Personal Mode only hides technical UI; original per-tool toggles, permission checks, confirmations and audit remain in force. Review separately installed MCP capabilities before trusting them.
 6. Review accessibility, keyboard/scroll ergonomics on physical iPhone and iPad, iOS 16 minimum, signing, offline response and error states.
 
