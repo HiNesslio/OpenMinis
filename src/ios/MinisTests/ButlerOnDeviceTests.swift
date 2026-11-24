@@ -122,6 +122,33 @@ final class ButlerOnDeviceTests: XCTestCase {
         XCTAssertFalse(config.path.hasPrefix(exposed.path + "/"))
     }
 
+    func testAIBriefingRejectsUnknownPriorityReferences() {
+        let json = #"{"headline":"今日重點","summary":"請查看已確認的行程","priorityInsightIds":["I8"]}"#
+        XCTAssertNil(ButlerAIBriefingService.parseValidatedResponse(
+            json, allowedInsightIds: ["I0", "I1"]
+        ))
+    }
+
+    func testAIBriefingAllowsSourceBoundedPriorities() {
+        let json = #"{"headline":"有一項安排","summary":"請確認下一個已知行程","priorityInsightIds":["I0"]}"#
+        let analysis = ButlerAIBriefingService.parseValidatedResponse(
+            json, allowedInsightIds: ["I0"]
+        )
+        XCTAssertEqual(analysis?.priorityInsightIds, ["I0"])
+        XCTAssertEqual(analysis?.headline, "有一項安排")
+    }
+
+    func testAIBriefingRejectsOverlongOrNonJSONResponses() {
+        let oversized = String(repeating: "長", count: 241)
+        let response = #"{"headline":"今日","summary":""# + oversized + #"""" + #","priorityInsightIds":[]}"#
+        XCTAssertNil(ButlerAIBriefingService.parseValidatedResponse(
+            response, allowedInsightIds: []
+        ))
+        XCTAssertNil(ButlerAIBriefingService.parseValidatedResponse(
+            "The answer is: " + response, allowedInsightIds: []
+        ))
+    }
+
     func testCardFailsClosedOnUnknownTypeOrArbitraryText() {
         let json = #"{"version":1,"kind":"execute","title":"Run","items":[]}"#
         let fence = String(repeating: "\u{0060}", count: 3)
