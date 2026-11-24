@@ -370,7 +370,9 @@ extension ContentView {
             }
         }
         ToolbarItem(placement: .topBarTrailing) {
-            if !isSelecting {
+            // The normal Personal Agent home does not advertise a terminal,
+            // rootfs manager, browser debugger or other developer controls.
+            if !isSelecting && advancedMode {
                 Menu {
                     Button {
                         showTerminal = true
