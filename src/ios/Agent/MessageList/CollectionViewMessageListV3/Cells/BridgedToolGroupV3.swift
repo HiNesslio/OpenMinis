@@ -23,8 +23,14 @@ struct BridgedToolGroupV3: View {
     let duration: TimeInterval?
     let isExpanded: Bool
     var maxWidth: CGFloat
+    @AppStorage(PersonalAgentMode.advancedModeKey) private var advancedMode = false
 
     var body: some View {
+        if !advancedMode {
+            // The folded technical summary is internal execution detail.
+            // Keep the underlying tool cells/history intact for Advanced Mode.
+            EmptyView()
+        } else {
         ToolGroupRowView(
             firstBlockId: firstBlockId,
             toolCount: group.toolCount,
@@ -38,5 +44,6 @@ struct BridgedToolGroupV3: View {
         .padding(.horizontal, 16)
         .opacity(message.isCompactedHistory ? 0.5 : 1.0)
         .accessibilityIdentifier("assistantToolGroup")
+        }
     }
 }
