@@ -440,6 +440,7 @@ struct AIChatView: View {
     /// height. Stored as a fraction rather than points so the preference
     /// survives rotation, Split View resizes and a move to another iPad.
     @AppStorage("chat.composer.heightFraction") var composerHeightFraction: Double = 0
+    @AppStorage(PersonalAgentMode.advancedModeKey) var advancedMode = false
     /// Live delta while a drag is in flight, in POINTS. Kept separate from the
     /// persisted fraction so an in-progress drag never writes to defaults and a
     /// cancelled gesture leaves no trace.
