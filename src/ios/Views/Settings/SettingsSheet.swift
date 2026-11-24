@@ -41,6 +41,7 @@ private enum SettingsDestination: Hashable {
 struct SettingsSheet: View {
     @Binding var showTerminal: Bool
     @AppStorage("appearanceMode") private var appearanceMode: Int = 0
+    @AppStorage(PersonalAgentMode.advancedModeKey) private var advancedMode = false
     @Environment(\.dismiss) private var dismiss
     @ObservedObject private var deepLink = DeepLinkCoordinator.shared
     @State private var navPath = NavigationPath()
@@ -49,32 +50,64 @@ struct SettingsSheet: View {
     var body: some View {
         NavigationStack(path: $navPath) {
             List {
+                Section("Personal Agent") {
+                    Toggle("進階模式", isOn: $advancedMode)
+                    Text(advancedMode
+                         ? "已顯示開發者工具、終端機及進階設定。"
+                         : "聊天預設不執行 Shell、Python 或檔案操作。")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                if !advancedMode {
+                    Section("個人化與連接") {
+                        NavigationLink {
+                            MemoryManagementView()
+                        } label: {
+                            Label("記憶", systemImage: "brain.head.profile")
+                        }
+                        NavigationLink {
+                            MCPIntegrationsView()
+                        } label: {
+                            Label("連接服務", systemImage: "puzzlepiece.extension")
+                        }
+                        NavigationLink {
+                            SkillsManagementView()
+                        } label: {
+                            Label("技能", systemImage: "square.stack.3d.up")
+                        }
+                    }
+                }
+
                 Section {
                     NavigationLink {
                         ProviderInstancesView()
                     } label: {
                         if #available(iOS 26, *) {
-                            Label("Manage Providers", systemImage: "key.circle.fill")
+                            Label("連接或管理模型", systemImage: "key.circle.fill")
                         } else {
-                            Label("Manage Providers", systemImage: "lock.circle.fill")
+                            Label("連接或管理模型", systemImage: "lock.circle.fill")
                         }
                     }
 
-                    NavigationLink {
-                        ModelGroupsView()
-                    } label: {
-                        Label("Model Groups", systemImage: "gearshape.circle.fill")
-                    }
-
-                    NavigationLink {
-                        UsageStatsView()
-                    } label: {
-                        Label("Token Usage", systemImage: "chart.line.uptrend.xyaxis.circle.fill")
+                    if advancedMode {
+                        NavigationLink {
+                            ModelGroupsView()
+                        } label: {
+                            Label("Model Groups", systemImage: "gearshape.circle.fill")
+                        }
+                        NavigationLink {
+                            UsageStatsView()
+                        } label: {
+                            Label("Token Usage", systemImage: "chart.line.uptrend.xyaxis.circle.fill")
+                        }
                     }
                 } header: {
-                    Text("LLM Providers")
+                    Text("AI 模型")
                 } footer: {
-                    Text("Configure which models the agent uses, manage API keys & OAuth for each provider, and create model groups for fallback or load balancing.")
+                    if advancedMode {
+                        Text("Configure provider credentials, model groups, and usage metrics.")
+                    }
                 }
 
                 Section("Appearance") {
@@ -93,7 +126,8 @@ struct SettingsSheet: View {
                     }
                 }
 
-                Section("Agent Runtime") {
+                if advancedMode {
+                    Section("進階工具") {
                     // [T-tools-granular-switches] First row: per-tool switches.
                     NavigationLink {
                         ToolsSettingsView()
@@ -195,6 +229,7 @@ struct SettingsSheet: View {
                                 .background(.green, in: Circle())
                         }
                     }
+                    }
                 }
 
                 Section("Storage") {
@@ -211,6 +246,7 @@ struct SettingsSheet: View {
                                 .background(.blue, in: Circle())
                         }
                     }
+                    if advancedMode {
                     NavigationLink {
                         SharedFoldersSettingsView()
                     } label: {
@@ -236,6 +272,7 @@ struct SettingsSheet: View {
                                 .frame(width: 21, height: 21)
                                 .background(.orange, in: Circle())
                         }
+                    }
                     }
                     if #available(iOS 17.0, *) {
                         NavigationLink {
@@ -307,7 +344,8 @@ struct SettingsSheet: View {
                     }
                 }
 
-                Section("Logs") {
+                if advancedMode {
+                    Section("Logs") {
                     NavigationLink {
                         LogManagementView()
                     } label: {
@@ -320,6 +358,7 @@ struct SettingsSheet: View {
                                 .frame(width: 21, height: 21)
                                 .background(.gray, in: Circle())
                         }
+                    }
                     }
                 }
 
