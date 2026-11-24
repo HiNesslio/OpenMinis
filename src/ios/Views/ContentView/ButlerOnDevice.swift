@@ -816,6 +816,7 @@ enum ButlerAIBriefingService {
 struct ButlerChatBriefingView: View {
     let vm: AIChatViewModel
     let isConversationEmpty: Bool
+    let isComposerFocused: Bool
 
     @StateObject private var context = ButlerTodayModel()
     @AppStorage("butlerAIBriefingConsent") private var aiConsent = false
@@ -828,10 +829,11 @@ struct ButlerChatBriefingView: View {
     @State private var hasLoaded = false
     @Environment(\.scenePhase) private var scenePhase
 
-    init(vm: AIChatViewModel, isConversationEmpty: Bool) {
+    init(vm: AIChatViewModel, isConversationEmpty: Bool, isComposerFocused: Bool) {
         self.vm = vm
         self.isConversationEmpty = isConversationEmpty
-        _expanded = State(initialValue: isConversationEmpty)
+        self.isComposerFocused = isComposerFocused
+        _expanded = State(initialValue: isConversationEmpty && !isComposerFocused)
     }
 
     private var baseline: ButlerDailyBriefing {
@@ -879,6 +881,11 @@ struct ButlerChatBriefingView: View {
         .task { await refresh() }
         .onChange(of: isConversationEmpty) { empty in
             if !empty { withAnimation(.easeInOut(duration: 0.2)) { expanded = false } }
+        }
+        .onChange(of: isComposerFocused) { focused in
+            // An expanded Today panel must not crowd out the keyboard or the
+            // transcript while the user composes a chat message.
+            if focused { withAnimation(.easeInOut(duration: 0.2)) { expanded = false } }
         }
         .onChange(of: aiConsent) { granted in
             if granted {
