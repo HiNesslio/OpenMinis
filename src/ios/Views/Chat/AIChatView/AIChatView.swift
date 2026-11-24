@@ -787,7 +787,8 @@ struct AIChatView: View {
                 if remoteDeviceId == nil {
                     ButlerChatBriefingView(
                         vm: vm,
-                        isConversationEmpty: vm.messages.isEmpty && !vm.isLoadingSession
+                        isConversationEmpty: vm.messages.isEmpty && !vm.isLoadingSession,
+                        isComposerFocused: inputFocused
                     )
                 }
             }
