@@ -47,6 +47,7 @@ extension AIChatView {
         // glass as a plain toolbar icon (fixes the earlier capsule).
         return ChatTrailingMenuButton(
             messagesEmpty: vm.messages.isEmpty,
+            personalMode: !advancedMode,
             hasSession: vm.sessionId != nil,
             isForcePulling: isForcePulling,
             iCloudSyncEnabled: iCloudSyncEnabled,
