@@ -196,30 +196,6 @@ extension AIChatViewModel {
             )
         }
 
-        // A request might have been started before the user switched from
-        // Advanced to Personal Mode. The schema gate alone cannot stop an
-        // in-flight, model-generated shell/file/browser call: deny it at the
-        // single dispatch entry before any side effects or argument repair.
-        if !PersonalAgentMode.allowsTool(tu.name) {
-            let blocked = "This developer tool is disabled in Personal Mode. Enable Advanced Mode in Settings only if you intentionally need it."
-            if msgIdx < messages.count, blockIdx < messages[msgIdx].blocks.count {
-                messages[msgIdx].blocks[blockIdx].content = blocked
-                messages[msgIdx].blocks[blockIdx].toolStatus = .failed(message: blocked)
-            }
-            let snapshot = ToolSnapshot(type: .text, text: blocked, mediaRef: nil, duration: nil)
-            let item = ToolSnapshotItem(
-                id: tu.id, toolName: tu.name, snapshot: snapshot,
-                mediaResolver: await ChatStore.shared.mediaFileURLResolver()
-            )
-            return ToolExecOutcome(
-                toolId: tu.id, toolName: tu.name,
-                resultPart: .toolResult(id: tu.id, name: tu.name, content: blocked, isError: true),
-                snapshotEntry: (toolName: tu.name, snapshot: snapshot),
-                snapshotItem: item,
-                cancelled: false
-            )
-        }
-
         var toolOutput: String = ""
         var toolSuccess: Bool = false
         var toolImageData: Data?
