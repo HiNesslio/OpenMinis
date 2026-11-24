@@ -1,28 +1,14 @@
 import SwiftUI
 import UserNotifications
 
-/// Personal Agent is the V2 default. Developer tools still exist behind an
-/// explicit Advanced Mode switch, but must disappear from both the model's
-/// tool schema AND the runtime dispatcher in Personal Mode.
+/// The Personal/Advanced setting controls how much implementation detail
+/// the UI shows. It is NOT a capability or authorization switch: the model
+/// keeps its normal shell, Python (via shell), browser and file tools.
 enum PersonalAgentMode {
     static let advancedModeKey = "personalAgent.advancedMode"
 
     nonisolated static var isEnabled: Bool {
         !UserDefaults.standard.bool(forKey: advancedModeKey)
-    }
-
-    nonisolated static func allowsTool(_ name: String) -> Bool {
-        guard isEnabled else { return true }
-        switch name {
-        case "shell_execute", "file_read", "file_write", "file_edit",
-             "read_image", "browser_use", "subagent_task", "agent_status":
-            return false
-        default:
-            // Memory and explicitly installed connections are not silently
-            // reclassified as developer tools. Further per-connection action
-            // permissions are a separate P2 task.
-            return true
-        }
     }
 }
 
@@ -110,8 +96,7 @@ enum AgentToolSwitch: String, CaseIterable {
     }
 
     nonisolated static func isToolEnabled(_ toolName: String) -> Bool {
-        guard PersonalAgentMode.allowsTool(toolName) else { return false }
-        return governing(toolName)?.isEnabled ?? true
+        governing(toolName)?.isEnabled ?? true
     }
 
     // MARK: Migration from the single master switch (cdbfd4f75)
